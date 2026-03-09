@@ -1,0 +1,1913 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CasaAbruzzo — Апартаменты в Абруццо</title>
+<!-- Telegram Mini App SDK -->
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+/* ===== RESET ===== */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; font-size: 16px; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: #fff; color: #222; overflow-x: hidden; -webkit-font-smoothing: antialiased; }
+img { max-width: 100%; display: block; }
+a { color: inherit; text-decoration: none; }
+button { font-family: inherit; cursor: pointer; }
+
+/* ===== TOKENS ===== */
+:root {
+  --red: #FF385C; --red-d: #E31C5F;
+  --g1: #222; --g2: #484848; --g3: #767676; --g4: #B0B0B0; --g5: #DDDDDD; --g6: #F7F7F7;
+  --white: #fff;
+  --r: 12px; --rl: 24px;
+  --sh: 0 4px 16px rgba(0,0,0,.1); --shl: 0 8px 32px rgba(0,0,0,.12);
+}
+
+/* ===== TELEGRAM MINI APP OVERRIDES ===== */
+/* Если открыто внутри Telegram — подхватываем цвета темы */
+body.tg-app {
+  background: var(--tg-theme-bg-color, #fff);
+  color: var(--tg-theme-text-color, #222);
+}
+body.tg-app .nav { display: none; } /* в TG нет нужды в топ-навигации */
+body.tg-app .footer-sec { padding-bottom: 80px; } /* место под нативную MainButton */
+
+/* Скрыть вступительную заставку в Mini App — открывать сразу контент */
+body.tg-app #intro { display: none !important; }
+
+/* Кнопка «Забронировать» в TG заменяется нативной MainButton — скрываем дублёр */
+body.tg-app .book-btn { display: none; }
+
+/* Убрать sticky-nav отступ сверху */
+body.tg-app .hero-wrap { padding-top: 0; }
+
+/* Мобильная адаптация под узкий экран TG */
+@media (max-width: 480px) {
+  body.tg-app .listing-grid { grid-template-columns: 1fr; }
+  body.tg-app .card-wrap { display: block; }
+  body.tg-app .bcard { border-radius: 0; border-left: none; border-right: none; }
+}
+
+/* =============================
+   INTRO
+   ============================= */
+#intro {
+  position: fixed; inset: 0; z-index: 999; background: #000;
+  display: flex; align-items: center; justify-content: center;
+  transition: opacity .8s ease, visibility .8s ease;
+}
+#intro.gone { opacity: 0; visibility: hidden; pointer-events: none; }
+
+.i-slide {
+  position: absolute; inset: 0; background-size: cover; background-position: center;
+  opacity: 0; transition: opacity 1.2s ease;
+}
+.i-slide.on { opacity: 1; }
+.i-slide:nth-child(1) { background-image: url('slide1.png'); }
+.i-slide:nth-child(2) { background-image: url('slide3.png'); }
+.i-slide:nth-child(3) { background-image: url('slide4.png'); }
+.i-slide:nth-child(4) { background-image: url('slide2.png'); }
+
+.i-overlay {
+  position: absolute; inset: 0;
+  background: linear-gradient(to bottom, rgba(0,0,0,.2) 0%, rgba(0,0,0,.55) 100%);
+}
+.i-body {
+  position: relative; z-index: 2; text-align: center; color: #fff; padding: 24px;
+  pointer-events: none;
+}
+.i-eyebrow {
+  font-size: .78rem; letter-spacing: .25em; text-transform: uppercase;
+  color: rgba(255,255,255,.75); margin-bottom: 20px;
+  animation: fadeUp .8s ease .3s both;
+}
+.i-title {
+  font-size: clamp(2.6rem, 7vw, 5.5rem); font-weight: 600;
+  line-height: 1.06; letter-spacing: -.02em;
+  animation: fadeUp .8s ease .5s both;
+}
+.i-title em { font-style: normal; color: rgba(255,255,255,.7); display: block; font-weight: 300; font-size: .58em; margin-top: 10px; }
+.i-tag {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: rgba(255,255,255,.12); backdrop-filter: blur(10px);
+  border: 1px solid rgba(255,255,255,.25); border-radius: 100px;
+  padding: 9px 22px; font-size: .9rem; color: rgba(255,255,255,.9);
+  margin-top: 28px; animation: fadeUp .8s ease .7s both;
+}
+.i-skip {
+  position: absolute; top: 20px; right: 20px; z-index: 10;
+  background: rgba(255,255,255,.13); backdrop-filter: blur(12px);
+  border: 1px solid rgba(255,255,255,.28); color: #fff;
+  padding: 9px 18px; border-radius: 100px; font-size: .82rem;
+  opacity: 0; pointer-events: none; transition: opacity .4s, background .2s;
+}
+.i-skip.show { opacity: 1; pointer-events: auto; }
+.i-skip:hover { background: rgba(255,255,255,.25); }
+
+/* Audio button */
+.i-audio {
+  position: absolute; bottom: 48px; right: 20px; z-index: 10;
+  background: rgba(255,255,255,.13); backdrop-filter: blur(12px);
+  border: 1px solid rgba(255,255,255,.28); color: #fff;
+  width: 40px; height: 40px; border-radius: 50%; font-size: 1rem;
+  display: flex; align-items: center; justify-content: center;
+  opacity: 0; transition: opacity .4s, background .2s;
+}
+.i-audio.show { opacity: 1; }
+.i-audio:hover { background: rgba(255,255,255,.25); }
+
+.i-bar { position: absolute; bottom: 0; left: 0; right: 0; height: 3px; background: rgba(255,255,255,.2); }
+.i-bar-fill { height: 100%; background: #fff; width: 0; animation: barFill 10s linear forwards; }
+
+/* =============================
+   NAV
+   ============================= */
+.nav {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+  height: 72px; display: flex; align-items: center;
+  padding: 0 24px; gap: 16px;
+  background: transparent; border-bottom: 1px solid transparent;
+  transition: all .3s ease;
+}
+.nav.stuck {
+  background: rgba(255,255,255,.96); backdrop-filter: blur(20px);
+  border-color: var(--g5); box-shadow: 0 1px 3px rgba(0,0,0,.08);
+}
+.nav-logo { font-size: 1.5rem; color: var(--red); font-weight: 700; letter-spacing: -.03em; flex-shrink: 0; }
+.nav-logo span { font-weight: 300; color: var(--g2); }
+.nav-links { flex: 1; display: flex; justify-content: center; gap: 4px; }
+.nav-links a {
+  padding: 9px 14px; border-radius: 100px; font-size: .85rem;
+  font-weight: 500; color: var(--g2); transition: background .2s;
+}
+.nav-links a:hover { background: var(--g6); }
+.nav-right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.nav-book {
+  padding: 10px 20px; border-radius: 100px; font-size: .85rem;
+  font-weight: 600; color: #fff; background: var(--red); border: none;
+  transition: all .2s;
+}
+.nav-book:hover { background: var(--red-d); }
+.nav-burger { display: none; background: none; border: 1px solid var(--g5); border-radius: 100px; padding: 8px 12px; gap: 4px; align-items: center; }
+.nav-burger span { width: 18px; height: 1.5px; background: var(--g1); border-radius: 2px; display: block; }
+.mob-menu {
+  display: none; position: fixed; inset: 0; z-index: 200;
+  background: #fff; flex-direction: column; padding: 80px 32px 40px;
+  gap: 8px;
+}
+.mob-menu.open { display: flex; }
+.mob-menu a, .mob-menu button.mob-link {
+  padding: 16px 0; font-size: 1.1rem; font-weight: 500; color: var(--g1);
+  border-bottom: 1px solid var(--g6); background: none; border-left: none; border-right: none; border-top: none;
+  text-align: left; width: 100%; display: block;
+  transition: color .2s;
+}
+.mob-menu a:hover, .mob-menu button.mob-link:hover { color: var(--red); }
+.mob-close {
+  position: absolute; top: 20px; right: 20px;
+  background: var(--g6); border: none; border-radius: 50%;
+  width: 40px; height: 40px; font-size: 1.1rem; color: var(--g1);
+  display: flex; align-items: center; justify-content: center;
+}
+
+/* =============================
+   HERO GALLERY
+   ============================= */
+.hero { padding-top: 72px; }
+.hero-gallery {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px; height: 520px;
+}
+@media(min-width:960px){.hero-gallery{height:580px;}}
+.hg-main { border-radius: var(--rl) 0 0 var(--rl); overflow: hidden; cursor: pointer; position: relative; }
+.hg-grid { display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 8px; }
+.hg-cell { overflow: hidden; cursor: pointer; position: relative; }
+.hg-cell:nth-child(2) { border-radius: 0 var(--rl) 0 0; }
+.hg-cell:nth-child(4) { border-radius: 0 0 var(--rl) 0; }
+.hg-main img, .hg-cell img {
+  width: 100%; height: 100%; object-fit: cover;
+  transition: transform .5s ease;
+}
+.hg-main:hover img, .hg-cell:hover img { transform: scale(1.04); }
+.gallery-btn {
+  position: absolute; bottom: 14px; right: 14px;
+  background: rgba(255,255,255,.93); backdrop-filter: blur(6px);
+  border: 1px solid rgba(0,0,0,.1); border-radius: 8px;
+  padding: 7px 14px; font-size: .8rem; font-weight: 600; color: var(--g1);
+  transition: all .2s;
+}
+.gallery-btn:hover { background: #fff; box-shadow: var(--sh); }
+
+/* MOBILE: gallery stack */
+@media(max-width:680px){
+  .hero-gallery { grid-template-columns: 1fr; height: 280px; }
+  .hg-grid { display: none; }
+  .hg-main { border-radius: 0; }
+}
+
+/* =============================
+   CONTENT LAYOUT
+   ============================= */
+.wrap { max-width: 1120px; margin: 0 auto; padding: 0 24px; }
+.content-grid { display: grid; grid-template-columns: 1fr 380px; gap: 72px; padding: 48px 0 80px; }
+@media(max-width:960px){ .content-grid { grid-template-columns: 1fr; gap: 40px; } }
+
+/* =============================
+   LISTING HEADER
+   ============================= */
+.listing-hd { border-bottom: 1px solid var(--g5); padding-bottom: 28px; margin-bottom: 28px; }
+.listing-title { font-size: 1.7rem; font-weight: 600; color: var(--g1); line-height: 1.25; margin-bottom: 10px; }
+.listing-meta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: .9rem; color: var(--g2); }
+.meta-dot { color: var(--g4); }
+.superhost { display: inline-flex; align-items: center; gap: 5px; font-size: .8rem; font-weight: 600; color: var(--g2); border: 1px solid var(--g5); border-radius: 100px; padding: 3px 10px; margin-top: 8px; }
+
+.host-row { display: flex; align-items: center; gap: 16px; border-bottom: 1px solid var(--g5); padding: 28px 0; margin-bottom: 28px; }
+.h-avatar { width: 52px; height: 52px; border-radius: 50%; background: linear-gradient(135deg,#FF385C,#FF7B95); display: flex; align-items: center; justify-content: center; font-size: 1.3rem; font-weight: 700; color: #fff; flex-shrink: 0; position: relative; }
+.h-badge { position: absolute; bottom:-2px; right:-2px; background: var(--red); border-radius: 50%; width: 17px; height: 17px; display: flex; align-items: center; justify-content: center; font-size: .6rem; border: 2px solid #fff; color: #fff; }
+.h-info h3 { font-size: .95rem; font-weight: 600; }
+.h-info p { font-size: .85rem; color: var(--g3); margin-top: 2px; }
+
+.features { display: flex; flex-direction: column; gap: 18px; border-bottom: 1px solid var(--g5); padding-bottom: 28px; margin-bottom: 28px; }
+.feat { display: flex; gap: 14px; align-items: flex-start; }
+.feat-ico { font-size: 1.4rem; flex-shrink: 0; width: 26px; text-align: center; }
+.feat-txt h4 { font-size: .92rem; font-weight: 600; color: var(--g1); }
+.feat-txt p { font-size: .86rem; color: var(--g3); margin-top: 2px; line-height: 1.5; }
+
+.sec { border-bottom: 1px solid var(--g5); padding-bottom: 32px; margin-bottom: 32px; }
+.sec:last-child { border: none; }
+.sec h2 { font-size: 1.25rem; font-weight: 600; margin-bottom: 18px; }
+.desc-text { font-size: .93rem; color: var(--g2); line-height: 1.75; }
+.desc-text p+p { margin-top: 12px; }
+.show-more { background: none; border: none; padding: 0; font-size: .88rem; font-weight: 600; color: var(--g1); text-decoration: underline; margin-top: 10px; }
+
+.am-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+@media(max-width:480px){ .am-grid { grid-template-columns: 1fr; } }
+.am-item { display: flex; align-items: center; gap: 12px; font-size: .88rem; color: var(--g2); }
+.am-ico { font-size: 1.2rem; width: 22px; text-align: center; flex-shrink: 0; }
+
+.map-box { background: var(--g6); border-radius: var(--rl); height: 260px; overflow: hidden; border: 1px solid var(--g5); margin-bottom: 14px; }
+.map-box iframe { width: 100%; height: 100%; border: none; }
+.loc-desc { font-size: .88rem; color: var(--g2); line-height: 1.7; }
+
+/* =============================
+   TERRACE SECTION
+   ============================= */
+.terrace-zones { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 20px; }
+@media(max-width:680px){ .terrace-zones { grid-template-columns: 1fr; } }
+.tz-card {
+  background: linear-gradient(135deg, #fff8f0, #fff);
+  border: 1px solid #ffe8cc;
+  border-radius: var(--r); padding: 22px 18px; text-align: center;
+  transition: box-shadow .2s, transform .2s;
+}
+.tz-card:hover { box-shadow: var(--sh); transform: translateY(-2px); }
+.tz-ico { font-size: 2rem; margin-bottom: 10px; }
+.tz-card h4 { font-size: .95rem; font-weight: 700; color: var(--g1); margin-bottom: 6px; }
+.tz-card p { font-size: .84rem; color: var(--g3); line-height: 1.6; }
+.terrace-badges { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+.tbadge { background: var(--g6); border: 1px solid var(--g5); border-radius: 100px; padding: 5px 14px; font-size: .8rem; color: var(--g2); }
+
+/* =============================
+   HERO SINGLE PHOTO
+   ============================= */
+.hero-single {
+  padding-top: 72px; position: relative;
+  width: 100%; height: 65vh; min-height: 400px; overflow: hidden;
+}
+.hero-single img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.hero-single-btn {
+  position: absolute; bottom: 18px; right: 18px;
+  background: rgba(255,255,255,.93); border: 1px solid rgba(0,0,0,.12);
+  border-radius: 8px; padding: 8px 16px; font-size: .84rem; font-weight: 600;
+  cursor: pointer; transition: box-shadow .2s;
+}
+.hero-single-btn:hover { box-shadow: 0 4px 12px rgba(0,0,0,.15); }
+
+/* =============================
+   ROOM CAROUSELS
+   ============================= */
+.carousels-wrap { padding: 0 0 8px; }
+.room-section { padding: 28px 0; border-top: 1px solid var(--g5); }
+.room-section:first-child { border-top: none; padding-top: 36px; }
+.room-section-hd {
+  display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px;
+}
+.room-section-hd h3 { font-size: 1.05rem; font-weight: 600; color: var(--g1); }
+.cnav { display: flex; align-items: center; gap: 8px; }
+.cnav-btn {
+  width: 32px; height: 32px; border-radius: 50%;
+  border: 1.5px solid var(--g5); background: #fff; font-size: 1.1rem;
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  transition: all .2s; line-height: 1;
+}
+.cnav-btn:hover:not(:disabled) { background: var(--g6); border-color: var(--g3); }
+.cnav-btn:disabled { opacity: .3; cursor: default; }
+.cnav-count { font-size: .8rem; color: var(--g3); min-width: 38px; text-align: center; }
+.carousel-outer { overflow: hidden; }
+.carousel-track { display: flex; gap: 8px; transition: transform .35s cubic-bezier(.4,0,.2,1); will-change: transform; }
+.carousel-item {
+  flex: 0 0 calc(33.333% - 6px);
+  height: 260px; border-radius: 10px; overflow: hidden;
+  cursor: pointer; position: relative; background: var(--g6);
+}
+.carousel-item img { width: 100%; height: 260px; object-fit: cover; display: block; transition: transform .4s ease; }
+.carousel-item:hover img { transform: scale(1.04); }
+@media(max-width:768px){
+  .carousel-item { flex: 0 0 calc(50% - 4px); height: 200px; }
+  .carousel-item img { height: 200px; }
+}
+@media(max-width:480px){
+  .carousel-item { flex: 0 0 82%; height: 180px; }
+  .carousel-item img { height: 180px; }
+}
+
+/* =============================
+   ROOM PHOTO BLOCKS (legacy, keep for compat)
+   ============================= */
+.room-photos-sec { padding: 40px 0 20px; border-top: 1px solid var(--g5); }
+.room-block { margin-bottom: 40px; }
+.room-block-hd {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 12px;
+}
+.room-block-hd h3 { font-size: 1.1rem; font-weight: 600; color: var(--g1); }
+.room-all-btn {
+  font-size: .82rem; font-weight: 600; color: var(--g2); background: none;
+  border: 1px solid var(--g5); border-radius: 100px; padding: 6px 14px;
+  cursor: pointer; transition: all .2s; white-space: nowrap;
+}
+.room-all-btn:hover { background: var(--g6); }
+.room-grid {
+  display: flex;
+  flex-direction: row;
+  gap: 6px;
+  height: 240px;
+}
+.room-grid.two-col { height: 200px; }
+.rg-cell {
+  flex: 1 1 0;
+  height: 240px;
+  overflow: hidden;
+  border-radius: 8px;
+  cursor: pointer;
+  position: relative;
+  background: var(--g6);
+}
+.room-grid.two-col .rg-cell { height: 200px; }
+.rg-cell:first-child { flex: 2 1 0; }
+.rg-cell img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: transform .4s ease;
+}
+.rg-cell:hover img { transform: scale(1.04); }
+.rg-more {
+  position: absolute; inset: 0;
+  background: rgba(0,0,0,.5);
+  display: flex; align-items: center; justify-content: center;
+  color: #fff; font-size: 1rem; font-weight: 700;
+  z-index: 1;
+}
+@media(max-width:768px){
+  .room-grid { height: 180px; }
+  .room-grid.two-col { height: 160px; }
+  .rg-cell, .room-grid.two-col .rg-cell { height: 100%; }
+  .rg-cell:nth-child(3) { display: none; }
+  .rg-cell:first-child { flex: 1.5 1 0; }
+}
+@media(max-width:480px){
+  .rg-cell:nth-child(n+2) { display: none; }
+  .rg-cell:first-child { flex: 1 1 0; }
+}
+
+/* =============================
+   FULL GALLERY MODAL
+   ============================= */
+.fullgal-bg {
+  display: none; position: fixed; inset: 0; z-index: 400;
+  background: #fff; overflow-y: auto;
+}
+.fullgal-bg.open { display: block; }
+.fullgal-head {
+  position: sticky; top: 0; z-index: 10;
+  background: rgba(255,255,255,.97); backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--g5);
+  padding: 14px 28px; display: flex; align-items: center; gap: 16px;
+}
+.fullgal-head h2 { font-size: 1rem; font-weight: 700; flex: 1; }
+.fullgal-close {
+  background: var(--g6); border: none; border-radius: 50%;
+  width: 36px; height: 36px; font-size: 1rem; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: background .2s;
+}
+.fullgal-close:hover { background: var(--g5); }
+.fullgal-body { padding: 32px 28px 64px; max-width: 1120px; margin: 0 auto; }
+.fg-section { margin-bottom: 52px; }
+.fg-section-hd {
+  font-size: 1.15rem; font-weight: 600; margin-bottom: 14px;
+  padding-bottom: 12px; border-bottom: 1px solid var(--g5);
+}
+.fg-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 8px;
+}
+.fg-grid img {
+  width: 100%; aspect-ratio: 4/3; object-fit: cover;
+  border-radius: 8px; cursor: zoom-in;
+  transition: transform .3s ease, box-shadow .3s ease;
+}
+.fg-grid img:hover { transform: scale(1.02); box-shadow: 0 8px 24px rgba(0,0,0,.15); }
+
+/* Lightbox */
+.lb-bg {
+  display: none; position: fixed; inset: 0; z-index: 500;
+  background: rgba(0,0,0,.92); align-items: center; justify-content: center;
+}
+.lb-bg.open { display: flex; }
+.lb-img { max-width: 90vw; max-height: 90vh; border-radius: 8px; object-fit: contain; }
+.lb-close {
+  position: absolute; top: 20px; right: 24px;
+  background: rgba(255,255,255,.15); border: none; border-radius: 50%;
+  width: 42px; height: 42px; color: #fff; font-size: 1.1rem; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+}
+.lb-prev, .lb-next {
+  position: absolute; top: 50%; transform: translateY(-50%);
+  background: rgba(255,255,255,.15); border: none; border-radius: 50%;
+  width: 46px; height: 46px; color: #fff; font-size: 1.2rem; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: background .2s;
+}
+.lb-prev { left: 16px; }
+.lb-next { right: 16px; }
+.lb-prev:hover, .lb-next:hover { background: rgba(255,255,255,.3); }
+.lb-counter { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); color: rgba(255,255,255,.7); font-size: .85rem; }
+
+/* =============================
+   AMENITIES EXPANDED
+   ============================= */
+.am-more { overflow: hidden; max-height: 0; transition: max-height .5s ease; }
+.am-more.open { max-height: 2000px; }
+.am-cat-label {
+  font-size: .75rem; font-weight: 700; text-transform: uppercase; letter-spacing: .1em;
+  color: var(--g3); grid-column: 1/-1;
+  padding: 16px 0 4px; border-top: 1px solid var(--g5); margin-top: 4px;
+}
+.am-cat-label:first-child { border-top: none; padding-top: 4px; }
+.am-expand-btn {
+  display: flex; align-items: center; gap: 8px;
+  margin-top: 18px; padding: 12px 18px;
+  border: 1.5px solid var(--g1); border-radius: 8px;
+  background: none; font-size: .9rem; font-weight: 600; color: var(--g1);
+  cursor: pointer; transition: background .2s;
+  width: fit-content;
+}
+.am-expand-btn:hover { background: var(--g6); }
+
+.rev-sum { display: flex; align-items: center; gap: 12px; margin-bottom: 24px; }
+.big-r { font-size: 2.8rem; font-weight: 700; line-height: 1; }
+.r-stars { font-size: 1rem; color: var(--red); letter-spacing: 2px; }
+.r-cnt { font-size: .85rem; color: var(--g3); }
+.rev-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+@media(max-width:680px){ .rev-grid { grid-template-columns: 1fr; } }
+.rv-meta { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+.rv-av { width: 38px; height: 38px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: .88rem; color: #fff; flex-shrink: 0; }
+.rv-name { font-size: .86rem; font-weight: 600; }
+.rv-date { font-size: .78rem; color: var(--g3); }
+.rv-text { font-size: .86rem; color: var(--g2); line-height: 1.65; }
+
+/* =============================
+   BOOKING CARD
+   ============================= */
+.card-wrap { position: sticky; top: 88px; }
+@media(max-width:960px){ .card-wrap { position: static; } }
+.bcard {
+  background: #fff; border: 1px solid var(--g5); border-radius: var(--rl);
+  padding: 28px; box-shadow: var(--shl);
+}
+.bcard-price { display: flex; align-items: baseline; gap: 6px; margin-bottom: 20px; }
+.bcard-price .amt { font-size: 1.45rem; font-weight: 700; }
+.bcard-price .ngt { font-size: .88rem; color: var(--g3); }
+.bcard-price .orig { font-size: .85rem; color: var(--g3); text-decoration: line-through; margin-left: 4px; }
+
+/* Calendar picker */
+.cal-wrap { border: 1.5px solid var(--g5); border-radius: var(--r); overflow: hidden; margin-bottom: 10px; transition: border-color .2s; }
+.cal-wrap:focus-within { border-color: var(--g1); }
+.cal-dates { display: grid; grid-template-columns: 1fr 1fr; }
+.cal-field { padding: 11px 14px; cursor: pointer; transition: background .15s; }
+.cal-field:first-child { border-right: 1px solid var(--g5); }
+.cal-field:hover { background: var(--g6); }
+.cal-field label { display: block; font-size: .66rem; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--g2); margin-bottom: 3px; cursor: pointer; }
+.cal-field input { border: none; background: none; font-size: .88rem; color: var(--g1); width: 100%; cursor: pointer; outline: none; font-family: inherit; }
+
+.guests-row { border: 1.5px solid var(--g5); border-radius: var(--r); padding: 11px 14px; margin-bottom: 14px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; transition: border-color .2s; }
+.guests-row:focus-within { border-color: var(--g1); }
+.guests-row label { font-size: .66rem; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--g2); display: block; margin-bottom: 3px; }
+.guests-row select { border: none; background: none; font-size: .88rem; color: var(--g1); font-family: inherit; outline: none; cursor: pointer; width: 100%; }
+
+.price-breakdown { padding: 16px 0; border-top: 1px solid var(--g5); display: flex; flex-direction: column; gap: 10px; }
+.pl { display: flex; justify-content: space-between; font-size: .88rem; color: var(--g2); }
+.pl.total { font-weight: 700; color: var(--g1); padding-top: 12px; border-top: 1px solid var(--g5); font-size: .95rem; }
+.pl .disc { color: #008A05; }
+#nodate-msg { font-size:.82rem;color:var(--g3);text-align:center;padding:8px 0; }
+
+.book-btn {
+  width: 100%; padding: 14px; border: none; border-radius: var(--r);
+  background: linear-gradient(135deg,#FF385C,#E31C5F); color: #fff;
+  font-size: 1rem; font-weight: 700; margin: 14px 0 8px;
+  transition: all .2s; box-shadow: 0 4px 14px rgba(255,56,92,.3);
+}
+.book-btn:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(255,56,92,.4); }
+.book-note { text-align: center; font-size: .78rem; color: var(--g3); margin-bottom: 16px; }
+.msg-row { display: flex; gap: 8px; }
+.msg-btn { flex: 1; display: flex; align-items: center; justify-content: center; gap: 7px; padding: 11px; border-radius: var(--r); font-size: .84rem; font-weight: 600; border: 1px solid var(--g5); background: none; color: var(--g2); transition: all .2s; }
+.msg-btn:hover { background: var(--g6); }
+
+/* =============================
+   PAYMENT MODAL
+   ============================= */
+.modal-bg {
+  display: none; position: fixed; inset: 0; z-index: 300;
+  background: rgba(0,0,0,.5); backdrop-filter: blur(4px);
+  align-items: center; justify-content: center; padding: 16px;
+}
+.modal-bg.open { display: flex; }
+.modal {
+  background: #fff; border-radius: var(--rl); width: 100%; max-width: 520px;
+  max-height: 90vh; overflow-y: auto; box-shadow: var(--shl);
+  animation: fadeUp .35s ease both;
+}
+.modal-head { padding: 24px 28px 0; display: flex; justify-content: space-between; align-items: center; }
+.modal-head h2 { font-size: 1.15rem; font-weight: 700; }
+.modal-close { background: var(--g6); border: none; border-radius: 50%; width: 34px; height: 34px; font-size: 1rem; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+.modal-body { padding: 20px 28px 28px; }
+.modal-step { display: none; }
+.modal-step.on { display: block; }
+/* Step 1 - booking summary */
+.modal-summary { background: var(--g6); border-radius: var(--r); padding: 18px; margin-bottom: 20px; }
+.ms-row { display: flex; justify-content: space-between; font-size: .88rem; color: var(--g2); margin-bottom: 8px; }
+.ms-row:last-child { margin: 0; font-weight: 700; color: var(--g1); padding-top: 10px; border-top: 1px solid var(--g5); font-size: .93rem; }
+/* Form fields */
+.mf { margin-bottom: 14px; }
+.mf label { font-size: .75rem; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--g2); display: block; margin-bottom: 6px; }
+.mf input, .mf select { width: 100%; border: 1.5px solid var(--g5); border-radius: var(--r); padding: 12px 14px; font-size: .9rem; font-family: inherit; outline: none; color: var(--g1); transition: border-color .2s; }
+.mf input:focus, .mf select:focus { border-color: var(--g1); }
+.mf-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.modal-btn { width: 100%; padding: 14px; border: none; border-radius: var(--r); background: linear-gradient(135deg,#FF385C,#E31C5F); color: #fff; font-size: 1rem; font-weight: 700; margin-top: 4px; transition: all .2s; box-shadow: 0 4px 14px rgba(255,56,92,.28); }
+.modal-btn:hover { transform: translateY(-1px); }
+.modal-btn.outline { background: none; border: 1.5px solid var(--g5); color: var(--g1); box-shadow: none; }
+.modal-btn.outline:hover { background: var(--g6); }
+/* Step 2 - payment */
+.pay-method { display: flex; gap: 8px; margin-bottom: 16px; }
+.pay-m { flex: 1; padding: 10px; border: 1.5px solid var(--g5); border-radius: var(--r); text-align: center; font-size: .82rem; font-weight: 600; cursor: pointer; color: var(--g2); transition: all .2s; background: none; }
+.pay-m.on { border-color: var(--g1); color: var(--g1); background: var(--g6); }
+.card-row { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 10px; }
+.pay-note { font-size: .78rem; color: var(--g3); text-align: center; margin-top: 12px; }
+.secure-badge { display: flex; align-items: center; justify-content: center; gap: 6px; font-size: .78rem; color: var(--g3); margin-top: 10px; }
+/* Step 3 - success */
+.success-box { text-align: center; padding: 16px 0 8px; }
+.success-ico { font-size: 3.5rem; margin-bottom: 14px; }
+.success-box h3 { font-size: 1.3rem; font-weight: 700; margin-bottom: 8px; }
+.success-box p { font-size: .9rem; color: var(--g2); line-height: 1.6; }
+
+/* =============================
+   GUEST GUIDE
+   ============================= */
+.guide-sec { background: var(--g6); padding: 72px 0; border-top: 1px solid var(--g5); }
+.guide-hd { text-align: center; margin-bottom: 48px; }
+.eyebrow { font-size: .73rem; letter-spacing: .22em; text-transform: uppercase; color: var(--red); font-weight: 600; margin-bottom: 10px; }
+.guide-hd h2 { font-size: 1.9rem; font-weight: 600; color: var(--g1); }
+.guide-hd p { font-size: .95rem; color: var(--g3); margin-top: 8px; max-width: 460px; margin-left: auto; margin-right: auto; }
+
+.guide-nav { display: flex; overflow-x: auto; padding-bottom: 0; margin-bottom: 36px; border-bottom: 1px solid var(--g5); scrollbar-width: none; gap: 0; }
+.guide-nav::-webkit-scrollbar { display: none; }
+.g-tab { padding: 11px 20px; font-size: .84rem; font-weight: 500; color: var(--g3); background: none; border: none; border-bottom: 2px solid transparent; white-space: nowrap; cursor: pointer; transition: all .2s; margin-bottom: -1px; }
+.g-tab.on { color: var(--g1); border-bottom-color: var(--g1); font-weight: 600; }
+.g-tab:hover:not(.on) { color: var(--g2); }
+
+.guide-pane { display: none; animation: fadeIn .3s ease; }
+.guide-pane.on { display: block; }
+.guide-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px,1fr)); gap: 16px; }
+.gcard { background: #fff; border-radius: var(--rl); border: 1px solid var(--g5); padding: 26px; transition: box-shadow .2s; }
+.gcard:hover { box-shadow: var(--sh); }
+.gcard-ico { font-size: 1.7rem; margin-bottom: 12px; }
+.gcard h3 { font-size: .97rem; font-weight: 600; color: var(--g1); margin-bottom: 10px; }
+.gcard ul { list-style: none; display: flex; flex-direction: column; gap: 7px; }
+.gcard li { font-size: .86rem; color: var(--g2); line-height: 1.5; padding-left: 14px; position: relative; }
+.gcard li::before { content: '·'; position: absolute; left: 0; color: var(--red); font-weight: 900; font-size: 1.1em; }
+.gcard p { font-size: .86rem; color: var(--g2); line-height: 1.65; }
+.gcard .todo { color: var(--g4); font-style: italic; }
+.hl { background: var(--g6); border-radius: 10px; padding: 12px 16px; margin-top: 10px; }
+.hl label { font-size: .68rem; text-transform: uppercase; letter-spacing: .1em; color: var(--g3); font-weight: 600; display: block; margin-bottom: 3px; }
+.hl span { font-size: .95rem; font-weight: 700; color: var(--g1); }
+
+/* =============================
+   FOOTER
+   ============================= */
+footer { background: var(--g6); border-top: 1px solid var(--g5); padding: 36px 24px; }
+.footer-in { max-width: 1120px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; }
+.footer-logo { font-size: .95rem; font-weight: 700; color: var(--red); letter-spacing: -.02em; }
+.footer-links { display: flex; gap: 20px; flex-wrap: wrap; }
+.footer-links a { font-size: .8rem; color: var(--g3); transition: color .2s; }
+.footer-links a:hover { color: var(--g1); text-decoration: underline; }
+.footer-copy { font-size: .78rem; color: var(--g4); }
+
+/* =============================
+   ANIMATIONS & REVEAL
+   ============================= */
+@keyframes fadeUp { from { opacity:0; transform:translateY(18px); } to { opacity:1; transform:none; } }
+@keyframes fadeIn  { from { opacity:0; } to { opacity:1; } }
+@keyframes barFill { from { width:0; } to { width:100%; } }
+.reveal { opacity:0; transform:translateY(18px); transition: opacity .6s ease, transform .6s ease; }
+.reveal.in { opacity:1; transform:none; }
+
+/* =============================
+   MOBILE NAV
+   ============================= */
+@media(max-width:768px){
+  .nav-links, .nav-right .nav-book { display: none; }
+  .nav-burger { display: flex; }
+  .nav-right { gap: 4px; }
+}
+</style>
+</head>
+<body>
+
+<!-- =============== INTRO =============== -->
+<div id="intro">
+  <div class="i-slide on"></div>
+  <div class="i-slide"></div>
+  <div class="i-slide"></div>
+  <div class="i-slide"></div>
+  <div class="i-overlay"></div>
+
+  <audio id="bgAudio" loop preload="auto">
+    <source src="Abruzzo-Italy-s-Most-Underrated-Gem.m4a" type="audio/mp4">
+  </audio>
+
+  <button class="i-skip" id="skipBtn" onclick="doSkip()">Пропустить →</button>
+  <button class="i-audio" id="audioBtn" onclick="toggleAudio()" title="Звук">🔇</button>
+
+  <div class="i-body">
+    <p class="i-eyebrow">Абруццо · Италия</p>
+    <h1 class="i-title">
+      Там, где горы<br>встречают море
+      <em>Ваш дом в сердце Апеннин</em>
+    </h1>
+    <div class="i-tag">🏖️ Терраса 90 м² · Пляж 250 м · Монтесильвано</div>
+  </div>
+
+  <div class="i-bar"><div class="i-bar-fill"></div></div>
+</div>
+
+<!-- =============== MOBILE MENU =============== -->
+<div class="mob-menu" id="mobMenu">
+  <button class="mob-close" onclick="closeMob()">✕</button>
+  <a href="#gallery" onclick="closeMob()">Фото</a>
+  <a href="#terrace" onclick="closeMob()">Терраса</a>
+  <a href="#amenities" onclick="closeMob()">Удобства</a>
+  <a href="#location" onclick="closeMob()">Локация</a>
+  <a href="#reviews" onclick="closeMob()">Отзывы</a>
+  <a href="#guide" onclick="closeMob()">Гостям</a>
+  <a href="#contacts" onclick="closeMob()">Забронировать</a>
+</div>
+
+<!-- =============== NAV =============== -->
+<nav class="nav" id="nav">
+  <div class="nav-logo">casa<span>abruzzo</span></div>
+  <div class="nav-links">
+    <a href="#gallery">Фото</a>
+    <a href="#terrace">Терраса</a>
+    <a href="#amenities">Удобства</a>
+    <a href="#location">Локация</a>
+    <a href="#reviews">Отзывы</a>
+    <a href="#guide">Гостям</a>
+  </div>
+  <div class="nav-right">
+    <a href="#contacts" class="nav-book">Забронировать</a>
+    <button class="nav-burger" onclick="openMob()">
+      <span></span><span></span><span></span>
+    </button>
+  </div>
+</nav>
+
+<!-- =============== HERO SINGLE PHOTO =============== -->
+<div class="hero-single" id="gallery">
+  <img src="фото квартира/1терраса (2).jpg" alt="Терраса с видом на море" loading="eager">
+  <button class="hero-single-btn" onclick="openGallery()">📷 Все фото (34)</button>
+</div>
+
+<!-- =============== ROOM CAROUSELS =============== -->
+<div class="carousels-wrap">
+  <div class="wrap">
+
+    <!-- Терраса -->
+    <div class="room-section">
+      <div class="room-section-hd">
+        <h3>🌅 Терраса — 90 м²</h3>
+        <div class="cnav">
+          <button class="cnav-btn" id="prev-0">‹</button>
+          <span class="cnav-count" id="cc-0"></span>
+          <button class="cnav-btn" id="next-0">›</button>
+        </div>
+      </div>
+      <div class="carousel-outer">
+        <div class="carousel-track" id="ct-0">
+          <div class="carousel-item" onclick="openLbRoom(0,0)"><img src="фото квартира/1терраса (1).jpg" alt="" loading="lazy"></div>
+          <div class="carousel-item" onclick="openLbRoom(0,1)"><img src="фото квартира/1терраса (2).jpg" alt="" loading="lazy"></div>
+          <div class="carousel-item" onclick="openLbRoom(0,2)"><img src="фото квартира/1терраса (3).jpg" alt="" loading="lazy"></div>
+          <div class="carousel-item" onclick="openLbRoom(0,3)"><img src="фото квартира/1терраса (4).jpg" alt="" loading="lazy"></div>
+          <div class="carousel-item" onclick="openLbRoom(0,4)"><img src="фото квартира/1терраса (5).jpg" alt="" loading="lazy"></div>
+          <div class="carousel-item" onclick="openLbRoom(0,5)"><img src="фото квартира/1терраса (6).jpg" alt="" loading="lazy"></div>
+          <div class="carousel-item" onclick="openLbRoom(0,6)"><img src="фото квартира/1терраса (7).jpg" alt="" loading="lazy"></div>
+          <div class="carousel-item" onclick="openLbRoom(0,7)"><img src="фото квартира/1терраса (8).jpg" alt="" loading="lazy"></div>
+          <div class="carousel-item" onclick="openLbRoom(0,8)"><img src="фото квартира/1терраса (9).jpg" alt="" loading="lazy"></div>
+          <div class="carousel-item" onclick="openLbRoom(0,9)"><img src="фото квартира/1терраса (10).jpg" alt="" loading="lazy"></div>
+          <div class="carousel-item" onclick="openLbRoom(0,10)"><img src="фото квартира/1терраса (11).jpg" alt="" loading="lazy"></div>
+          <div class="carousel-item" onclick="openLbRoom(0,11)"><img src="фото квартира/1терраса (12).jpg" alt="" loading="lazy"></div>
+          <div class="carousel-item" onclick="openLbRoom(0,12)"><img src="фото квартира/1терраса (13).jpg" alt="" loading="lazy"></div>
+          <div class="carousel-item" onclick="openLbRoom(0,13)"><img src="фото квартира/1терраса (14).jpg" alt="" loading="lazy"></div>
+          <div class="carousel-item" onclick="openLbRoom(0,14)"><img src="фото квартира/1терраса (15).jpg" alt="" loading="lazy"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Гостиная и кухня -->
+    <div class="room-section">
+      <div class="room-section-hd">
+        <h3>🛋️ Гостиная и кухня</h3>
+        <div class="cnav">
+          <button class="cnav-btn" id="prev-1">‹</button>
+          <span class="cnav-count" id="cc-1"></span>
+          <button class="cnav-btn" id="next-1">›</button>
+        </div>
+      </div>
+      <div class="carousel-outer">
+        <div class="carousel-track" id="ct-1">
+          <div class="carousel-item" onclick="openLbRoom(1,0)"><img src="фото квартира/2гостиная-кухня (1).jpg" alt="" loading="lazy"></div>
+          <div class="carousel-item" onclick="openLbRoom(1,1)"><img src="фото квартира/2гостиная-кухня (2).jpg" alt="" loading="lazy"></div>
+          <div class="carousel-item" onclick="openLbRoom(1,2)"><img src="фото квартира/2гостиная-кухня (3).jpg" alt="" loading="lazy"></div>
+          <div class="carousel-item" onclick="openLbRoom(1,3)"><img src="фото квартира/2гостиная-кухня (4).jpg" alt="" loading="lazy"></div>
+          <div class="carousel-item" onclick="openLbRoom(1,4)"><img src="фото квартира/2гостиная-кухня (5).jpg" alt="" loading="lazy"></div>
+          <div class="carousel-item" onclick="openLbRoom(1,5)"><img src="фото квартира/2гостиная-кухня (6).jpg" alt="" loading="lazy"></div>
+          <div class="carousel-item" onclick="openLbRoom(1,6)"><img src="фото квартира/2гостиная-кухня (7).jpg" alt="" loading="lazy"></div>
+          <div class="carousel-item" onclick="openLbRoom(1,7)"><img src="фото квартира/2гостиная-кухня (8).jpg" alt="" loading="lazy"></div>
+          <div class="carousel-item" onclick="openLbRoom(1,8)"><img src="фото квартира/2гостиная-кухня (9).jpg" alt="" loading="lazy"></div>
+          <div class="carousel-item" onclick="openLbRoom(1,9)"><img src="фото квартира/2гостиная-кухня (10).jpg" alt="" loading="lazy"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Спальни -->
+    <div class="room-section">
+      <div class="room-section-hd">
+        <h3>🛏️ Спальни</h3>
+        <div class="cnav">
+          <button class="cnav-btn" id="prev-2">‹</button>
+          <span class="cnav-count" id="cc-2"></span>
+          <button class="cnav-btn" id="next-2">›</button>
+        </div>
+      </div>
+      <div class="carousel-outer">
+        <div class="carousel-track" id="ct-2">
+          <div class="carousel-item" onclick="openLbRoom(2,0)"><img src="фото квартира/3спальня б (1).jpg" alt="" loading="lazy"></div>
+          <div class="carousel-item" onclick="openLbRoom(2,1)"><img src="фото квартира/3спальня б (2).jpg" alt="" loading="lazy"></div>
+          <div class="carousel-item" onclick="openLbRoom(2,2)"><img src="фото квартира/3спальня б (3).jpg" alt="" loading="lazy"></div>
+          <div class="carousel-item" onclick="openLbRoom(2,3)"><img src="фото квартира/3спальня б (4).jpg" alt="" loading="lazy"></div>
+          <div class="carousel-item" onclick="openLbRoom(2,4)"><img src="фото квартира/4спальня м. (1).JPEG" alt="" loading="lazy"></div>
+          <div class="carousel-item" onclick="openLbRoom(2,5)"><img src="фото квартира/4спальня м..jpg" alt="" loading="lazy"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Ванная -->
+    <div class="room-section">
+      <div class="room-section-hd">
+        <h3>🚿 Ванная</h3>
+        <div class="cnav">
+          <button class="cnav-btn" id="prev-3">‹</button>
+          <span class="cnav-count" id="cc-3"></span>
+          <button class="cnav-btn" id="next-3">›</button>
+        </div>
+      </div>
+      <div class="carousel-outer">
+        <div class="carousel-track" id="ct-3">
+          <div class="carousel-item" onclick="openLbRoom(3,0)"><img src="фото квартира/5туалет (1).jpg" alt="" loading="lazy"></div>
+          <div class="carousel-item" onclick="openLbRoom(3,1)"><img src="фото квартира/5туалет (2).jpg" alt="" loading="lazy"></div>
+          <div class="carousel-item" onclick="openLbRoom(3,2)"><img src="фото квартира/5туалет (3).jpg" alt="" loading="lazy"></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- =============== FULL GALLERY MODAL =============== -->
+<div class="fullgal-bg" id="fullGallery">
+  <div class="fullgal-head">
+    <button class="fullgal-close" onclick="closeGallery()">✕</button>
+    <h2>Фото квартиры</h2>
+  </div>
+  <div class="fullgal-body" id="galleryBody">
+    <!-- generated by JS -->
+  </div>
+</div>
+
+<!-- =============== LIGHTBOX =============== -->
+<div class="lb-bg" id="lbBg" onclick="lbBgClick(event)">
+  <button class="lb-close" onclick="closeLb()">✕</button>
+  <button class="lb-prev" onclick="lbNav(-1)">‹</button>
+  <img class="lb-img" id="lbImg" src="" alt="">
+  <button class="lb-next" onclick="lbNav(1)">›</button>
+  <span class="lb-counter" id="lbCounter"></span>
+</div>
+
+<!-- =============== MAIN CONTENT =============== -->
+<div class="wrap">
+  <div class="content-grid">
+
+    <!-- LEFT -->
+    <div>
+      <!-- Header -->
+      <div class="listing-hd reveal">
+        <h1 class="listing-title">Апартаменты с террасой 90 м² у моря · Монтесильвано, Абруццо</h1>
+        <div class="listing-meta">
+          <span>⭐ <strong>4.97</strong></span>
+          <span class="meta-dot">·</span>
+          <span>218 отзывов</span>
+          <span class="meta-dot">·</span>
+          <span>90 м² · 6-й этаж</span>
+          <span class="meta-dot">·</span>
+          <span>2 спальни</span>
+          <span class="meta-dot">·</span>
+          <span>До 6 гостей</span>
+        </div>
+        <div class="superhost">🏅 Суперхозяин</div>
+      </div>
+
+      <!-- Host -->
+      <div class="host-row reveal">
+        <div class="h-avatar">П<div class="h-badge">✓</div></div>
+        <div class="h-info">
+          <h3>Хозяин: Пётр</h3>
+          <p>Суперхозяин · 2 года · Отвечает за 15 мин</p>
+        </div>
+      </div>
+
+      <!-- Features -->
+      <div class="features reveal">
+        <div class="feat">
+          <div class="feat-ico">🌅</div>
+          <div class="feat-txt">
+            <h4>Терраса 90 м² с панорамным видом</h4>
+            <p>Три зоны: завтрак с видом на море, барбекю-ужин, релакс на шезлонгах. Вид на Адриатику, горы Апеннины и город — всё сразу.</p>
+          </div>
+        </div>
+        <div class="feat">
+          <div class="feat-ico">🏖️</div>
+          <div class="feat-txt">
+            <h4>Пляж в 250 метрах — 3 минуты пешком</h4>
+            <p>Включены 3 пляжных кресла и 2 зонтика. Бары и пиццерии прямо на набережной.</p>
+          </div>
+        </div>
+        <div class="feat">
+          <div class="feat-ico">👥</div>
+          <div class="feat-txt">
+            <h4>До 6 гостей (+1 с доплатой) · Питомцы welcome</h4>
+            <p>2 спальни + диван-кровать в гостиной 130×200 см. Животные разрешены с небольшой доплатой.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Description -->
+      <div class="sec reveal">
+        <div class="desc-text">
+          <p>Просторная квартира 90 м² на 6-м этаже в Монтесильвано с видом на Адриатическое море, Апеннинские горы и город. Главная особенность — солнечная терраса 90 м², где вы будете проводить большую часть времени.</p>
+          <p>В квартире 2 спальни: главная с кроватью 160×200 см и кондиционером, вторая с двумя односпальными кроватями 80×190 см. В гостиной — диван-кровать 130×200 см и кондиционер, что позволяет принять до 6 гостей (7-й с доплатой). ТВ в квартире нет — зато терраса с закатами.</p>
+          <p>Кухня полностью оснащена: газовая плита, электродуховка, микроволновка, посудомойка, стиральная машина, полная посуда. Из базовых продуктов при заезде: соль, сахар, кофе, оливковое масло.</p>
+          <p>Пляж — в 250 метрах, 3 минуты пешком. Всё для пляжного отдыха уже есть: 3 шезлонга и 2 зонтика. Питомцы разрешены с небольшой доплатой, можно курить на террасе.</p>
+        </div>
+        <button class="show-more">Читать далее →</button>
+      </div>
+
+      <!-- Terrace section -->
+      <div class="sec reveal" id="terrace">
+        <h2>🌅 Терраса 90 м² — главная фишка квартиры</h2>
+        <p class="desc-text" style="margin-bottom:0">На 6-м этаже — открытый вид на море, горы и город. Три маркизы 3×4 м защищают от солнца. Три зоны под любое настроение:</p>
+        <div class="terrace-zones">
+          <div class="tz-card">
+            <div class="tz-ico">☀️</div>
+            <h4>Утренний завтрак</h4>
+            <p>Стол и стулья прямо у перил. Кофе с видом на Адриатику — лучший старт дня.</p>
+          </div>
+          <div class="tz-card">
+            <div class="tz-ico">🍖</div>
+            <h4>Барбекю-ужин</h4>
+            <p>Вечером — стол 160–240 см в окружении цветов. Аромат дров, морской бриз, закат.</p>
+          </div>
+          <div class="tz-card">
+            <div class="tz-ico">💤</div>
+            <h4>Зона релакса</h4>
+            <p>Шезлонги с видом на горы Апеннины. Читать, загорать, слушать прибой издали.</p>
+          </div>
+        </div>
+        <div class="terrace-badges">
+          <span class="tbadge">🌺 Живые цветы и пальмы</span>
+          <span class="tbadge">☂️ 3 маркизы 3×4 м</span>
+          <span class="tbadge">🌊 Вид на море</span>
+          <span class="tbadge">⛰️ Вид на горы</span>
+          <span class="tbadge">🌆 Вид на город</span>
+          <span class="tbadge">🚬 Можно курить</span>
+        </div>
+      </div>
+
+      <!-- Amenities -->
+      <div class="sec reveal" id="amenities">
+        <h2>Что предлагают апартаменты</h2>
+        <div class="am-grid">
+          <!-- Терраса и пляж -->
+          <div class="am-cat-label">🌅 Терраса и пляж</div>
+          <div class="am-item"><span class="am-ico">🏡</span>Терраса 90 м² · 3 маркизы 3×4 м</div>
+          <div class="am-item"><span class="am-ico">💤</span>Шезлонги + обеденная зона</div>
+          <div class="am-item"><span class="am-ico">🍖</span>Барбекю на террасе</div>
+          <div class="am-item"><span class="am-ico">🌊</span>Вид на море · горы · город</div>
+          <div class="am-item"><span class="am-ico">🏖️</span>Пляж 250 м · 3 кресла · 2 зонтика</div>
+          <div class="am-item"><span class="am-ico">🏊</span>Пляжные полотенца включены</div>
+          <!-- Кухня -->
+          <div class="am-cat-label">🍳 Кухня</div>
+          <div class="am-item"><span class="am-ico">🔥</span>Газовая плита</div>
+          <div class="am-item"><span class="am-ico">🥧</span>Электрическая духовка</div>
+          <div class="am-item"><span class="am-ico">📡</span>Микроволновка</div>
+          <div class="am-item"><span class="am-ico">🥣</span>Посудомоечная машина</div>
+          <div class="am-item"><span class="am-ico">🧺</span>Стиральная машина</div>
+          <div class="am-item"><span class="am-ico">🍽️</span>Полный набор посуды и приборов</div>
+        </div>
+
+        <!-- Скрытые удобства -->
+        <div class="am-more" id="amMore">
+          <div class="am-grid" style="margin-top:14px">
+            <div class="am-item"><span class="am-ico">🧂</span>Стартовый набор продуктов</div>
+            <div class="am-item"><span class="am-ico">📏</span>Стол раздвижной 160–240 см</div>
+            <!-- Ванная -->
+            <div class="am-cat-label">🚿 Ванная</div>
+            <div class="am-item"><span class="am-ico">🚿</span>Душевая кабина</div>
+            <div class="am-item"><span class="am-ico">🚽</span>Туалет + биде</div>
+            <div class="am-item"><span class="am-ico">💇</span>Фен</div>
+            <div class="am-item"><span class="am-ico">🧴</span>Туалетные принадлежности</div>
+            <!-- Спальня -->
+            <div class="am-cat-label">🛏️ Спальни и бельё</div>
+            <div class="am-item"><span class="am-ico">🛏️</span>Постельное бельё включено</div>
+            <div class="am-item"><span class="am-ico">🧻</span>Банные полотенца включены</div>
+            <div class="am-item"><span class="am-ico">🛋️</span>Диван-кровать 130×200 см (гостиная)</div>
+            <div class="am-item"><span class="am-ico">🛏️</span>Кровать 160×200 см (главная спальня)</div>
+            <div class="am-item"><span class="am-ico">🛏️</span>2 кровати 80×190 см (вторая спальня)</div>
+            <!-- Климат и техника -->
+            <div class="am-cat-label">❄️ Климат и техника</div>
+            <div class="am-item"><span class="am-ico">❄️</span>Кондиционер в главной спальне</div>
+            <div class="am-item"><span class="am-ico">❄️</span>Кондиционер в гостиной</div>
+            <div class="am-item"><span class="am-ico">📶</span>Wi-Fi 100 Мбит/с</div>
+            <div class="am-item"><span class="am-ico">👕</span>Утюг + отпариватель</div>
+            <!-- Правила -->
+            <div class="am-cat-label">📋 Правила и особенности</div>
+            <div class="am-item"><span class="am-ico">🐾</span>Питомцы разрешены (с доплатой)</div>
+            <div class="am-item"><span class="am-ico">🚬</span>Курение разрешено (терраса)</div>
+            <div class="am-item"><span class="am-ico">📺</span>ТВ отсутствует</div>
+            <div class="am-item"><span class="am-ico">🔑</span>Самостоятельное заселение</div>
+            <div class="am-item"><span class="am-ico">🆔</span>Рег. номер IT068024C2U2OFCHS5</div>
+          </div>
+        </div>
+
+        <button class="am-expand-btn" id="amBtn" onclick="toggleAm()">
+          <span id="amBtnIco">▼</span> Показать все удобства <span style="color:var(--g3);font-weight:400">(28)</span>
+        </button>
+      </div>
+
+      <!-- Location -->
+      <div class="sec reveal" id="location">
+        <h2>Где это находится</h2>
+        <div class="map-box">
+          <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d12099.55!2d14.148!3d42.513!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x133168d0e8a29c27%3A0x4fc0a3fb4e1b5f62!2sMontesilvano%2C+PE%2C+Italy!5e0!3m2!1sru!2sru!4v1" allowfullscreen loading="lazy"></iframe>
+        </div>
+        <p class="loc-desc">
+          <strong>Монтесильвано, Абруццо</strong> — набережная, пляж и свежий морской воздух.<br><br>
+          🏖️ <strong>Пляж — 250 м</strong> (3 мин пешком) &nbsp;·&nbsp;
+          🛒 Магазины — 100 м &nbsp;·&nbsp;
+          🏬 Супермаркет Oasi — 600 м<br>
+          🍕 Бары и пиццерии на набережной — рядом &nbsp;·&nbsp;
+          🚉 Ж/д станция — 15 мин пешком &nbsp;·&nbsp;
+          ✈️ Аэропорт Пескара — ~20 мин на авто<br><br>
+          Точный адрес — после подтверждения бронирования.
+        </p>
+      </div>
+
+      <!-- Reviews -->
+      <div class="sec reveal" id="reviews">
+        <div class="rev-sum">
+          <div class="big-r">4.97</div>
+          <div><div class="r-stars">★★★★★</div><div class="r-cnt">218 отзывов</div></div>
+        </div>
+        <div class="rev-grid">
+          <div>
+            <div class="rv-meta">
+              <div class="rv-av" style="background:linear-gradient(135deg,#f97316,#fb923c)">А</div>
+              <div><div class="rv-name">Анна, Москва</div><div class="rv-date">Февраль 2026</div></div>
+            </div>
+            <p class="rv-text">Вид из окна — лучшее, что я видела в жизни. Утром горы в снегу, через час — уже на море. Это магия Абруццо.</p>
+          </div>
+          <div>
+            <div class="rv-meta">
+              <div class="rv-av" style="background:linear-gradient(135deg,#6366f1,#8b5cf6)">М</div>
+              <div><div class="rv-name">Михаил, СПб</div><div class="rv-date">Январь 2026</div></div>
+            </div>
+            <p class="rv-text">Идеально для work-from-Italy. Быстрый интернет, тишина, потрясающая природа. Хозяин отвечает мгновенно.</p>
+          </div>
+          <div>
+            <div class="rv-meta">
+              <div class="rv-av" style="background:linear-gradient(135deg,#059669,#10b981)">Е</div>
+              <div><div class="rv-name">Елена, Минск</div><div class="rv-date">Декабрь 2025</div></div>
+            </div>
+            <p class="rv-text">Были с семьёй, дети в восторге от гор. Квартира чистая и просторная. Хотим вернуться этим летом.</p>
+          </div>
+          <div>
+            <div class="rv-meta">
+              <div class="rv-av" style="background:linear-gradient(135deg,#dc2626,#f87171)">Д</div>
+              <div><div class="rv-name">Дмитрий, Казань</div><div class="rv-date">Ноябрь 2025</div></div>
+            </div>
+            <p class="rv-text">Самостоятельное заселение — очень удобно. Квартира соответствует фото, даже лучше вживую.</p>
+          </div>
+        </div>
+        <button class="show-more" style="margin-top:20px">Показать все 218 отзывов →</button>
+      </div>
+    </div><!-- end left -->
+
+    <!-- RIGHT: BOOKING CARD -->
+    <div class="card-wrap reveal" id="contacts">
+      <div class="bcard">
+        <div class="bcard-price">
+          <span class="amt" id="cardRate">4 500 ₽</span>
+          <span class="ngt">/ ночь</span>
+          <span class="orig">5 400 ₽</span>
+        </div>
+
+        <div class="cal-wrap">
+          <div class="cal-dates">
+            <div class="cal-field">
+              <label>Заезд</label>
+              <input type="date" id="cin" min="">
+            </div>
+            <div class="cal-field">
+              <label>Выезд</label>
+              <input type="date" id="cout" min="">
+            </div>
+          </div>
+        </div>
+
+        <div class="guests-row">
+          <div>
+            <label>Гости</label>
+            <select id="guestsSelect">
+              <option>1 гость</option>
+              <option selected>2 гостя</option>
+              <option>3 гостя</option>
+              <option>4 гостя</option>
+              <option>5 гостей</option>
+              <option>6 гостей</option>
+              <option>7 гостей (+доплата)</option>
+            </select>
+          </div>
+        </div>
+
+        <div id="nodate-msg">Выберите даты, чтобы увидеть цену</div>
+        <div id="priceBreak" class="price-breakdown" style="display:none">
+          <div class="pl"><span id="pl1">—</span><span id="pl1v">—</span></div>
+          <div class="pl"><span>Скидка</span><span class="disc" id="plDisc">—</span></div>
+          <div class="pl"><span>Уборка</span><span>1 500 ₽</span></div>
+          <div class="pl total"><span>Итого</span><span id="plTotal">—</span></div>
+        </div>
+
+        <button class="book-btn" onclick="openModal()">Забронировать</button>
+        <p class="book-note">Бесплатная отмена в течение 48 часов</p>
+        <div class="msg-row">
+          <button class="msg-btn">💬 WhatsApp</button>
+          <button class="msg-btn">✈️ Telegram</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div><!-- end wrap -->
+
+<!-- =============== PAYMENT MODAL =============== -->
+<div class="modal-bg" id="modalBg" onclick="bgClose(event)">
+  <div class="modal">
+    <div class="modal-head">
+      <h2 id="modalTitle">Подтверждение бронирования</h2>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+
+      <!-- Step 1: Summary + contact -->
+      <div class="modal-step on" id="step1">
+        <div class="modal-summary" id="modalSummary">
+          <!-- filled by JS -->
+        </div>
+        <div class="mf-row">
+          <div class="mf"><label>Имя</label><input type="text" placeholder="Иван" id="fName"></div>
+          <div class="mf"><label>Фамилия</label><input type="text" placeholder="Иванов"></div>
+        </div>
+        <div class="mf"><label>Email</label><input type="email" placeholder="ivan@email.com" id="fEmail"></div>
+        <div class="mf"><label>Телефон / WhatsApp</label><input type="tel" placeholder="+7 (999) 000-00-00"></div>
+        <div class="mf"><label>Пожелания (необязательно)</label><input type="text" placeholder="Ранний заезд, детская кроватка..."></div>
+        <button class="modal-btn" onclick="goStep(2)">Перейти к оплате →</button>
+      </div>
+
+      <!-- Step 2: Payment -->
+      <div class="modal-step" id="step2">
+        <div class="modal-summary" id="modalSummary2"></div>
+        <div class="pay-method">
+          <button class="pay-m on" onclick="selPay(this)">💳 Карта</button>
+          <button class="pay-m" onclick="selPay(this)">📱 SBP</button>
+          <button class="pay-m" onclick="selPay(this)">🏦 Перевод</button>
+        </div>
+        <div id="payCard">
+          <div class="mf"><label>Номер карты</label><input type="text" placeholder="0000 0000 0000 0000" maxlength="19"></div>
+          <div class="card-row">
+            <div class="mf"><label>Срок</label><input type="text" placeholder="MM/YY" maxlength="5"></div>
+            <div class="mf"><label>CVV</label><input type="text" placeholder="•••" maxlength="3"></div>
+            <div class="mf"><label>Имя на карте</label><input type="text" placeholder="IVAN IVANOV"></div>
+          </div>
+        </div>
+        <div id="paySbp" style="display:none">
+          <div class="gcard" style="text-align:center;padding:28px;background:var(--g6);border:none;border-radius:var(--r)">
+            <div style="font-size:2rem;margin-bottom:8px">📱</div>
+            <p style="font-size:.88rem;color:var(--g2)">Переведите сумму через СБП на номер<br><strong style="font-size:1rem;color:var(--g1)">+7 (999) 123-45-67</strong><br>и пришлите скриншот в WhatsApp</p>
+          </div>
+        </div>
+        <div id="payTransfer" style="display:none">
+          <div class="gcard" style="text-align:center;padding:28px;background:var(--g6);border:none;border-radius:var(--r)">
+            <div style="font-size:2rem;margin-bottom:8px">🏦</div>
+            <p style="font-size:.88rem;color:var(--g2)">Реквизиты для перевода будут<br>отправлены в мессенджер после подтверждения</p>
+          </div>
+        </div>
+        <button class="modal-btn" onclick="goStep(3)" style="margin-top:16px">Оплатить <span id="payAmount"></span></button>
+        <button class="modal-btn outline" onclick="goStep(1)" style="margin-top:8px">← Назад</button>
+        <div class="secure-badge">🔒 Защищённое соединение · SSL</div>
+        <p class="pay-note">Демо-режим. Для приёма реальных платежей подключите Stripe или ЮKassa.</p>
+      </div>
+
+      <!-- Step 3: Success -->
+      <div class="modal-step" id="step3">
+        <div class="success-box">
+          <div class="success-ico">🎉</div>
+          <h3>Бронирование подтверждено!</h3>
+          <p>Детали и инструкции по заселению отправлены на <strong id="confEmail"></strong>.<br><br>До встречи в Абруццо! 🏔️</p>
+          <button class="modal-btn" onclick="closeModal()" style="margin-top:24px">Отлично!</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- =============== GUEST GUIDE =============== -->
+<div class="guide-sec" id="guide">
+  <div class="wrap">
+    <div class="guide-hd reveal">
+      <p class="eyebrow">Для гостей</p>
+      <h2>Справочник гостя</h2>
+      <p>Всё необходимое до и во время пребывания — в одном месте</p>
+    </div>
+
+    <div class="guide-nav reveal">
+      <button class="g-tab on"  onclick="gTab('welcome',this)">👋 Добро пожаловать</button>
+      <button class="g-tab"     onclick="gTab('checkin',this)">🚪 Заселение</button>
+      <button class="g-tab"     onclick="gTab('tech',this)">📱 Техника и Wi-Fi</button>
+      <button class="g-tab"     onclick="gTab('rules',this)">📋 Правила дома</button>
+      <button class="g-tab"     onclick="gTab('local',this)">🗺️ Район</button>
+      <button class="g-tab"     onclick="gTab('emergency',this)">🚨 Экстренная помощь</button>
+      <button class="g-tab"     onclick="gTab('extra',this)">ℹ️ Доп. информация</button>
+    </div>
+
+    <!-- Welcome -->
+    <div class="guide-pane on" id="gp-welcome">
+      <div class="guide-cards">
+        <div class="gcard reveal"><div class="gcard-ico">👋</div><h3>Приветствие</h3><p class="todo">✏️ Личное сообщение от хозяина — тёплое и личное, создающее первое впечатление.</p></div>
+        <div class="gcard reveal"><div class="gcard-ico">📞</div><h3>Контакты хозяина</h3><p class="todo">✏️ Телефон, WhatsApp, Telegram и часы ответа.</p></div>
+        <div class="gcard reveal"><div class="gcard-ico">⏰</div><h3>Заезд и выезд</h3>
+          <ul><li>Заезд: с 14:00</li><li>Выезд: до 12:00</li><li>Ранний/поздний — по согласованию</li></ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- Check-in -->
+    <div class="guide-pane" id="gp-checkin">
+      <div class="guide-cards">
+        <div class="gcard reveal"><div class="gcard-ico">🗝️</div><h3>Получение ключей</h3><p class="todo">✏️ Кодовый замок: код придёт в мессенджер в день заезда.</p></div>
+        <div class="gcard reveal"><div class="gcard-ico">🏢</div><h3>Вход в здание</h3><p class="todo">✏️ Домофон, подъезд, лифт, этаж — пошагово.</p></div>
+        <div class="gcard reveal"><div class="gcard-ico">🅿️</div><h3>Парковка</h3><p class="todo">✏️ Место, номер, правила.</p></div>
+        <div class="gcard reveal"><div class="gcard-ico">🧹</div><h3>При выезде</h3>
+          <ul><li>Вынесите мусор</li><li>Ключи в сейф</li><li>Закройте окна и двери</li><li>Выключите приборы</li></ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tech -->
+    <div class="guide-pane" id="gp-tech">
+      <div class="guide-cards">
+        <div class="gcard reveal"><div class="gcard-ico">📶</div><h3>Wi-Fi</h3>
+          <div class="hl"><label>Сеть</label><span class="todo">✏️ Будет добавлено</span></div>
+          <div class="hl" style="margin-top:8px"><label>Пароль</label><span class="todo">✏️ Будет добавлено</span></div>
+        </div>
+        <div class="gcard reveal"><div class="gcard-ico">📺</div><h3>Smart TV</h3><p class="todo">✏️ Как включить, пульт, Netflix/Кинопоиск.</p></div>
+        <div class="gcard reveal"><div class="gcard-ico">❄️</div><h3>Кондиционер</h3><p class="todo">✏️ Где пульт, режимы охлаждения/обогрева.</p></div>
+        <div class="gcard reveal"><div class="gcard-ico">🫙</div><h3>Стиральная машина</h3><p class="todo">✏️ Программа, порошок, место.</p></div>
+        <div class="gcard reveal"><div class="gcard-ico">☕</div><h3>Кофемашина</h3><p class="todo">✏️ Модель, как заправить, где капсулы.</p></div>
+        <div class="gcard reveal"><div class="gcard-ico">🍳</div><h3>Кухонная техника</h3><p class="todo">✏️ Духовка, плита, особенности.</p></div>
+      </div>
+    </div>
+
+    <!-- Rules -->
+    <div class="guide-pane" id="gp-rules">
+      <div class="guide-cards">
+        <div class="gcard reveal"><div class="gcard-ico">✅</div><h3>Разрешено</h3><p class="todo">✏️ Что можно, питомцы, гости.</p></div>
+        <div class="gcard reveal"><div class="gcard-ico">❌</div><h3>Запрещено</h3>
+          <ul><li>Курение внутри</li><li>Вечеринки</li><li>Шум после 23:00</li><li>Более 4 гостей без согласования</li></ul>
+        </div>
+        <div class="gcard reveal"><div class="gcard-ico">🤫</div><h3>Соседи</h3><p class="todo">✏️ Тихие часы, особенности дома.</p></div>
+        <div class="gcard reveal"><div class="gcard-ico">🐾</div><h3>Животные</h3><p class="todo">✏️ Ваша политика.</p></div>
+      </div>
+    </div>
+
+    <!-- Local -->
+    <div class="guide-pane" id="gp-local">
+      <div class="guide-cards">
+        <div class="gcard reveal"><div class="gcard-ico">🛒</div><h3>Магазины</h3><p class="todo">✏️ Ближайшие магазины, рынки, часы работы.</p></div>
+        <div class="gcard reveal"><div class="gcard-ico">🍝</div><h3>Рестораны и кафе</h3><p class="todo">✏️ Личные рекомендации с местной кухней Абруццо.</p></div>
+        <div class="gcard reveal"><div class="gcard-ico">🚌</div><h3>Транспорт</h3><p class="todo">✏️ До пляжа, до гор, автобусы, аренда авто.</p></div>
+        <div class="gcard reveal"><div class="gcard-ico">🏔️</div><h3>Что посмотреть</h3><p class="todo">✏️ Ваш топ мест: горные деревушки, парки, пляжи, смотровые.</p></div>
+        <div class="gcard reveal"><div class="gcard-ico">✈️</div><h3>Как добраться</h3><p class="todo">✏️ Аэропорты, поезда, маршруты из Рима.</p></div>
+        <div class="gcard reveal"><div class="gcard-ico">📅</div><h3>Сезоны и события</h3><p class="todo">✏️ Когда лучше приезжать, фестивали, праздники.</p></div>
+      </div>
+    </div>
+
+    <!-- Emergency -->
+    <div class="guide-pane" id="gp-emergency">
+      <div class="guide-cards">
+        <div class="gcard reveal"><div class="gcard-ico">📞</div><h3>Связь с хозяином 24/7</h3><p class="todo">✏️ Экстренный телефон.</p></div>
+        <div class="gcard reveal"><div class="gcard-ico">🚑</div><h3>Экстренные службы Италии</h3>
+          <ul><li>Скорая помощь: <strong>118</strong></li><li>Полиция: <strong>113</strong></li><li>Пожарная: <strong>115</strong></li><li>Единый номер: <strong>112</strong></li></ul>
+        </div>
+        <div class="gcard reveal"><div class="gcard-ico">🔧</div><h3>Если что-то сломалось</h3><p class="todo">✏️ Алгоритм: позвонить хозяину, не пытаться чинить самому.</p></div>
+        <div class="gcard reveal"><div class="gcard-ico">🏥</div><h3>Ближайшая больница</h3><p class="todo">✏️ Адрес и маршрут.</p></div>
+      </div>
+    </div>
+
+    <!-- Extra (Section 7) -->
+    <div class="guide-pane" id="gp-extra">
+      <div class="guide-cards">
+        <div class="gcard reveal">
+          <div class="gcard-ico">🚗</div>
+          <h3>Вождение в Италии</h3>
+          <ul>
+            <li>ZTL-зоны (ограниченное движение) — следите за знаками в центре</li>
+            <li>Штраф за въезд в ZTL без разрешения — до 100 €</li>
+            <li>Автострада платная — держите мелочь или карту</li>
+            <li>Парковка: синяя разметка — платная, белая — бесплатная</li>
+          </ul>
+        </div>
+        <div class="gcard reveal">
+          <div class="gcard-ico">💶</div>
+          <h3>Деньги и оплата</h3>
+          <ul>
+            <li>Валюта: евро (€)</li>
+            <li>Карты Visa/Mastercard принимают везде</li>
+            <li>Мелкие кафе и рынки — часто только наличные</li>
+            <li>Банкоматы есть в любом городе</li>
+          </ul>
+        </div>
+        <div class="gcard reveal">
+          <div class="gcard-ico">🗣️</div>
+          <h3>Итальянские фразы</h3>
+          <ul>
+            <li>Buongiorno — Доброе утро/день</li>
+            <li>Grazie — Спасибо</li>
+            <li>Per favore — Пожалуйста</li>
+            <li>Dov'è...? — Где находится...?</li>
+            <li>Il conto, per favore — Счёт, пожалуйста</li>
+          </ul>
+        </div>
+        <div class="gcard reveal">
+          <div class="gcard-ico">🌤️</div>
+          <h3>Климат и что взять с собой</h3>
+          <ul>
+            <li>Лето: жарко и солнечно, до +35°C на побережье</li>
+            <li>Зима: в горах снег, на море +10–15°C</li>
+            <li>Обязательно: удобная обувь для горных троп</li>
+            <li>Крем от солнца — летом критично</li>
+          </ul>
+        </div>
+        <div class="gcard reveal">
+          <div class="gcard-ico">🍷</div>
+          <h3>Кухня Абруццо</h3>
+          <ul>
+            <li>Монтепульчано д'Абруццо — местное красное вино</li>
+            <li>Аррозтичини — знаменитые бараньи шашлычки</li>
+            <li>Макерони алла читарра — паста на «гитаре»</li>
+            <li>Обязательно попробуйте трюфели из Сульмоны</li>
+          </ul>
+        </div>
+        <div class="gcard reveal">
+          <div class="gcard-ico">📡</div>
+          <h3>Интернет и связь</h3>
+          <ul>
+            <li>Wi-Fi в квартире — стабильный, без ограничений</li>
+            <li>Местные SIM-карты: TIM, Vodafone, WindTre</li>
+            <li>Покупка SIM — любой оператор с паспортом</li>
+            <li>В горах — слабый сигнал, берегите заряд</li>
+          </ul>
+        </div>
+        <div class="gcard reveal">
+          <div class="gcard-ico">♻️</div>
+          <h3>Раздельный сбор мусора</h3>
+          <p class="todo">✏️ Правила раздельного мусора в вашем районе — в Италии это важно и обязательно.</p>
+        </div>
+        <div class="gcard reveal">
+          <div class="gcard-ico">💬</div>
+          <h3>Отзыв — лучшая благодарность</h3>
+          <p>После выезда буду рад вашему отзыву на Airbnb или Booking. Это помогает другим путешественникам и мотивирует делать всё ещё лучше 🙏</p>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-in">
+    <div class="footer-logo">casaabruzzo</div>
+    <div class="footer-links">
+      <a href="#guide">Справочник гостя</a>
+      <a href="#contacts">Бронирование</a>
+      <a href="#">Правила дома</a>
+      <a href="#">Политика отмены</a>
+    </div>
+    <div class="footer-copy">© 2026 CasaAbruzzo · Абруццо, Италия</div>
+  </div>
+</footer>
+
+<script>
+/* ===== INTRO ===== */
+const slides = document.querySelectorAll('.i-slide');
+let si = 0;
+const st = setInterval(() => { slides[si].classList.remove('on'); si=(si+1)%slides.length; slides[si].classList.add('on'); }, 2800);
+setTimeout(() => { document.getElementById('skipBtn').classList.add('show'); document.getElementById('audioBtn').classList.add('show'); }, 3000);
+let it = setTimeout(doSkip, 10000);
+
+/* Audio */
+const audio = document.getElementById('bgAudio');
+let muted = true;
+audio.volume = 0.45;
+/* Try autoplay muted first */
+audio.muted = true;
+audio.play().catch(()=>{});
+function toggleAudio(){
+  muted = !muted;
+  audio.muted = muted;
+  if(!muted){ audio.play().catch(()=>{}); }
+  document.getElementById('audioBtn').textContent = muted ? '🔇' : '🔊';
+}
+
+function doSkip(){
+  clearTimeout(it); clearInterval(st);
+  document.getElementById('intro').classList.add('gone');
+}
+
+/* ===== NAV ===== */
+window.addEventListener('scroll', () => document.getElementById('nav').classList.toggle('stuck', scrollY > 60));
+function openMob(){ document.getElementById('mobMenu').classList.add('open'); document.body.style.overflow='hidden'; }
+function closeMob(){ document.getElementById('mobMenu').classList.remove('open'); document.body.style.overflow=''; }
+
+/* ===== REVEAL ===== */
+const io = new IntersectionObserver(entries => entries.forEach((e,i) => { if(e.isIntersecting){ setTimeout(()=>e.target.classList.add('in'), i*55); io.unobserve(e.target); }}), {threshold:.08});
+document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
+
+/* ===== BOOKING DATES + PRICE ===== */
+const cin   = document.getElementById('cin');
+const cout  = document.getElementById('cout');
+// Set min dates
+const today = new Date(); today.setHours(0,0,0,0);
+const fmt = d => d.toISOString().split('T')[0];
+cin.min = fmt(today);
+// Booked dates (YYYY-MM-DD) — fill with real dates later
+const bookedRanges = [
+  ['2026-03-15','2026-03-19'],
+  ['2026-03-25','2026-03-30'],
+  ['2026-04-05','2026-04-10'],
+];
+function isBooked(d){
+  return bookedRanges.some(([s,e])=> d >= new Date(s) && d <= new Date(e));
+}
+cin.addEventListener('change', () => {
+  if(!cin.value) return;
+  const d = new Date(cin.value); d.setDate(d.getDate()+1);
+  cout.min = fmt(d);
+  if(cout.value && cout.value <= cin.value) cout.value='';
+  calcPrice();
+});
+cout.addEventListener('change', calcPrice);
+
+function calcPrice(){
+  if(!cin.value || !cout.value){ document.getElementById('nodate-msg').style.display=''; document.getElementById('priceBreak').style.display='none'; return; }
+  const n = Math.round((new Date(cout.value)-new Date(cin.value))/86400000);
+  if(n<=0){ return; }
+  const rate = n>=7 ? 3200 : n>=3 ? 3800 : 4500;
+  const full = 4500;
+  const disc = (full-rate)*n;
+  const cleaning = 1500;
+  const total = rate*n + cleaning - (disc>0?0:0); // disc already in rate
+  const actualTotal = rate*n + cleaning;
+  document.getElementById('nodate-msg').style.display='none';
+  document.getElementById('priceBreak').style.display='flex';
+  document.getElementById('cardRate').textContent = rate.toLocaleString('ru')+' ₽';
+  document.getElementById('pl1').textContent = `${rate.toLocaleString('ru')} ₽ × ${n} ${n===1?'ночь':n<5?'ночи':'ночей'}`;
+  document.getElementById('pl1v').textContent = `${(rate*n).toLocaleString('ru')} ₽`;
+  document.getElementById('plDisc').textContent = disc>0 ? `−${disc.toLocaleString('ru')} ₽` : '—';
+  document.getElementById('plTotal').textContent = `${actualTotal.toLocaleString('ru')} ₽`;
+}
+
+/* ===== MODAL ===== */
+function openModal(){
+  if(!cin.value||!cout.value){ alert('Выберите даты заезда и выезда'); cin.focus(); return; }
+  const n=Math.round((new Date(cout.value)-new Date(cin.value))/86400000);
+  const rate=n>=7?3200:n>=3?3800:4500;
+  const disc=(4500-rate)*n;
+  const total=rate*n+1500;
+  const html=s=>`<div class="ms-row"><span>${s}</span></div>`;
+  const sumHTML=`
+    <div class="ms-row"><span>📅 Заезд</span><span>${formatDate(cin.value)}</span></div>
+    <div class="ms-row"><span>📅 Выезд</span><span>${formatDate(cout.value)}</span></div>
+    <div class="ms-row"><span>${rate.toLocaleString('ru')} ₽ × ${n} ${n===1?'ночь':n<5?'ночи':'ночей'}</span><span>${(rate*n).toLocaleString('ru')} ₽</span></div>
+    ${disc>0?`<div class="ms-row"><span>Скидка</span><span style="color:#008A05">−${disc.toLocaleString('ru')} ₽</span></div>`:''}
+    <div class="ms-row"><span>Уборка</span><span>1 500 ₽</span></div>
+    <div class="ms-row"><span>Итого</span><span>${total.toLocaleString('ru')} ₽</span></div>`;
+  document.getElementById('modalSummary').innerHTML=sumHTML;
+  document.getElementById('modalSummary2').innerHTML=sumHTML;
+  document.getElementById('payAmount').textContent=total.toLocaleString('ru')+' ₽';
+  document.getElementById('modalBg').classList.add('open');
+  document.body.style.overflow='hidden';
+  goStep(1);
+}
+function closeModal(){ document.getElementById('modalBg').classList.remove('open'); document.body.style.overflow=''; }
+function bgClose(e){ if(e.target===document.getElementById('modalBg')) closeModal(); }
+function goStep(n){
+  document.querySelectorAll('.modal-step').forEach(s=>s.classList.remove('on'));
+  document.getElementById('step'+n).classList.add('on');
+  const titles=['','Подтверждение бронирования','Оплата',''];
+  document.getElementById('modalTitle').textContent=titles[n]||'';
+  if(n===3){ const em=document.getElementById('fEmail').value||'вашу почту'; document.getElementById('confEmail').textContent=em; }
+}
+function selPay(btn){
+  document.querySelectorAll('.pay-m').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on');
+  document.getElementById('payCard').style.display='none';
+  document.getElementById('paySbp').style.display='none';
+  document.getElementById('payTransfer').style.display='none';
+  const map={'💳 Карта':'payCard','📱 SBP':'paySbp','🏦 Перевод':'payTransfer'};
+  document.getElementById(map[btn.textContent]).style.display='block';
+}
+function formatDate(s){ const d=new Date(s); return d.toLocaleDateString('ru-RU',{day:'numeric',month:'long'}); }
+
+/* ===== AMENITIES TOGGLE ===== */
+function toggleAm(){
+  const more = document.getElementById('amMore');
+  const open = more.classList.toggle('open');
+  document.getElementById('amBtnIco').textContent = open ? '▲' : '▼';
+  document.getElementById('amBtn').innerHTML = open
+    ? '<span id="amBtnIco">▲</span> Скрыть'
+    : '<span id="amBtnIco">▼</span> Показать все удобства <span style="color:var(--g3);font-weight:400">(28)</span>';
+}
+
+/* ===== FULL GALLERY ===== */
+const galleryData = [
+  { label: '🌅 Терраса', photos: Array.from({length:15}, (_,i) => `фото квартира/1терраса (${i+1}).jpg`) },
+  { label: '🛋️ Гостиная и кухня', photos: Array.from({length:10}, (_,i) => `фото квартира/2гостиная-кухня (${i+1}).jpg`) },
+  { label: '🛏️ Спальни', photos: [
+    ...Array.from({length:4}, (_,i) => `фото квартира/3спальня б (${i+1}).jpg`),
+    'фото квартира/4спальня м. (1).JPEG',
+    'фото квартира/4спальня м..jpg'
+  ]},
+  { label: '🚿 Ванная', photos: Array.from({length:3}, (_,i) => `фото квартира/5туалет (${i+1}).jpg`) },
+];
+
+// Flatten for lightbox navigation
+let allPhotos = [];
+galleryData.forEach(s => s.photos.forEach(p => allPhotos.push(p)));
+let lbIndex = 0;
+
+/* Открыть всю галерею (кнопка "Все фото" в hero) */
+function openGallery(){
+  const body = document.getElementById('galleryBody');
+  body.innerHTML = galleryData.map((section, si) => `
+    <div class="fg-section" id="fgsec-${si}">
+      <div class="fg-section-hd">${section.label} <span style="font-weight:400;color:var(--g3);font-size:.85rem">(${section.photos.length})</span></div>
+      <div class="fg-grid">${section.photos.map(p=>`<img src="${p}" alt="" loading="lazy" onclick="openLb('${p.replace(/'/g,"\\'")}',${allPhotos.indexOf(p)})">`).join('')}</div>
+    </div>`).join('');
+  document.getElementById('fullGallery').querySelector('h2').textContent = 'Все фото';
+  document.getElementById('fullGallery').classList.add('open');
+  document.getElementById('fullGallery').scrollTop = 0;
+  document.body.style.overflow = 'hidden';
+}
+
+/* Открыть галерею конкретной комнаты */
+function openRoomGallery(sectionIdx){
+  const section = galleryData[sectionIdx];
+  const body = document.getElementById('galleryBody');
+  body.innerHTML = `
+    <div class="fg-section">
+      <div class="fg-section-hd">${section.label} <span style="font-weight:400;color:var(--g3);font-size:.85rem">(${section.photos.length})</span></div>
+      <div class="fg-grid">${section.photos.map((p,i)=>`<img src="${p}" alt="" loading="lazy" onclick="openLbRoom(${sectionIdx},${i})">`).join('')}</div>
+    </div>`;
+  document.getElementById('fullGallery').querySelector('h2').textContent = section.label;
+  document.getElementById('fullGallery').classList.add('open');
+  document.getElementById('fullGallery').scrollTop = 0;
+  document.body.style.overflow = 'hidden';
+}
+/* Лайтбокс внутри комнаты */
+function openLbRoom(sectionIdx, photoIdx){
+  const photos = galleryData[sectionIdx].photos;
+  lbPhotos = photos; lbIndex = photoIdx;
+  document.getElementById('lbImg').src = photos[photoIdx];
+  document.getElementById('lbCounter').textContent = `${photoIdx+1} / ${photos.length}`;
+  document.getElementById('lbBg').classList.add('open');
+}
+let lbPhotos = allPhotos; /* текущий набор для лайтбокса */
+function closeGallery(){
+  document.getElementById('fullGallery').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+/* ===== LIGHTBOX ===== */
+function openLb(src, idx){
+  lbPhotos = allPhotos; lbIndex = idx;
+  document.getElementById('lbImg').src = src;
+  document.getElementById('lbCounter').textContent = `${idx+1} / ${allPhotos.length}`;
+  document.getElementById('lbBg').classList.add('open');
+}
+function closeLb(){
+  document.getElementById('lbBg').classList.remove('open');
+}
+function lbNav(dir){
+  lbIndex = (lbIndex + dir + lbPhotos.length) % lbPhotos.length;
+  document.getElementById('lbImg').src = lbPhotos[lbIndex];
+  document.getElementById('lbCounter').textContent = `${lbIndex+1} / ${lbPhotos.length}`;
+}
+function lbBgClick(e){
+  if(e.target === document.getElementById('lbBg')) closeLb();
+}
+// Keyboard nav
+document.addEventListener('keydown', e => {
+  if(document.getElementById('lbBg').classList.contains('open')){
+    if(e.key==='ArrowRight') lbNav(1);
+    if(e.key==='ArrowLeft') lbNav(-1);
+    if(e.key==='Escape') closeLb();
+  }
+  if(document.getElementById('fullGallery').classList.contains('open') && e.key==='Escape') closeGallery();
+});
+
+/* ===== CAROUSELS ===== */
+(function(){
+  const carousels = [
+    { id: 0, total: 15 },
+    { id: 1, total: 10 },
+    { id: 2, total: 6  },
+    { id: 3, total: 3  }
+  ];
+  function visCount(){ return window.innerWidth > 768 ? 3 : window.innerWidth > 480 ? 2 : 1; }
+
+  carousels.forEach(c => {
+    let cur = 0;
+    const track = document.getElementById('ct-' + c.id);
+    const prevBtn = document.getElementById('prev-' + c.id);
+    const nextBtn = document.getElementById('next-' + c.id);
+    const counter = document.getElementById('cc-' + c.id);
+    const items = track.querySelectorAll('.carousel-item');
+
+    function upd(){
+      const vis = visCount();
+      const max = Math.max(0, c.total - vis);
+      if(cur > max) cur = max;
+      const w = items[0].getBoundingClientRect().width + 8;
+      track.style.transform = 'translateX(-' + (cur * w) + 'px)';
+      counter.textContent = (cur + 1) + ' / ' + c.total;
+      prevBtn.disabled = cur === 0;
+      nextBtn.disabled = cur >= max;
+    }
+    prevBtn.onclick = () => { if(cur > 0){ cur--; upd(); } };
+    nextBtn.onclick = () => { const max = Math.max(0, c.total - visCount()); if(cur < max){ cur++; upd(); } };
+    window.addEventListener('resize', upd);
+    setTimeout(upd, 0); // after layout
+  });
+})();
+
+/* ===== GUIDE TABS ===== */
+function gTab(id, btn){
+  document.querySelectorAll('.guide-pane').forEach(p=>p.classList.remove('on'));
+  document.querySelectorAll('.g-tab').forEach(b=>b.classList.remove('on'));
+  document.getElementById('gp-'+id).classList.add('on');
+  btn.classList.add('on');
+}
+
+/* ===== ADMIN SETTINGS LOADER ===== */
+(function applyAdminSettings(){
+  let d = {};
+  try { d = JSON.parse(localStorage.getItem('casaabruzzo_admin')) || {}; } catch(e){ return; }
+
+  /* --- PRICES --- */
+  const p = d.prices || {};
+  const rateShort  = p.rate_short  || 4500;
+  const rateMid    = p.rate_mid    || 3800;
+  const rateLong   = p.rate_long   || 3200;
+  const feeCleaning = p.fee_cleaning != null ? p.fee_cleaning : 1500;
+  const priceOrig  = p.price_orig  || null;
+
+  // Update card display rate
+  const cardRateEl = document.getElementById('cardRate');
+  if(cardRateEl) cardRateEl.textContent = rateShort.toLocaleString('ru') + ' ₽';
+
+  // Update strikethrough original price
+  const origEl = document.querySelector('.bcard-price .orig');
+  if(origEl){
+    if(priceOrig) { origEl.textContent = priceOrig.toLocaleString('ru') + ' ₽'; origEl.style.display=''; }
+    else origEl.style.display = 'none';
+  }
+
+  // Update cleaning line in booking card
+  document.querySelectorAll('.pl span').forEach(el => {
+    if(el.textContent === '1 500 ₽') el.textContent = feeCleaning.toLocaleString('ru') + ' ₽';
+  });
+
+  // Override calcPrice to use admin rates
+  window._adminRates = { rateShort, rateMid, rateLong, feeCleaning };
+
+  /* --- CONTACTS --- */
+  const ct = d.contacts || {};
+  const wa = ct.whatsapp || '';
+  const tg = ct.telegram || '';
+  const sbp = ct.sbp_phone || '';
+  const sbpName = ct.sbp_name || '';
+
+  // WhatsApp / Telegram buttons
+  document.querySelectorAll('.msg-btn').forEach(btn => {
+    if(btn.textContent.includes('WhatsApp') && wa) {
+      const clean = wa.replace(/\D/g,'');
+      btn.onclick = () => window.open('https://wa.me/'+clean, '_blank');
+    }
+    if(btn.textContent.includes('Telegram') && tg) {
+      const handle = tg.startsWith('@') ? tg.slice(1) : tg;
+      btn.onclick = () => window.open('https://t.me/'+handle, '_blank');
+    }
+  });
+
+  // SBP payment info in modal
+  if(sbp) {
+    const sbpEl = document.getElementById('paySbp');
+    if(sbpEl) {
+      sbpEl.innerHTML = `<div class="gcard" style="text-align:center;padding:28px;background:var(--g6);border:none;border-radius:var(--r)">
+        <div style="font-size:2rem;margin-bottom:8px">📱</div>
+        <p style="font-size:.88rem;color:var(--g2)">Переведите сумму через СБП на номер<br>
+        <strong style="font-size:1rem;color:var(--g1)">${sbp}</strong><br>
+        ${sbpName ? sbpName + '<br>' : ''}и пришлите скриншот в WhatsApp</p>
+      </div>`;
+    }
+  }
+
+  // Guest guide contacts card
+  document.querySelectorAll('.gcard').forEach(card => {
+    const h3 = card.querySelector('h3');
+    if(h3 && h3.textContent.includes('Контакты хозяина')) {
+      const lines = [];
+      if(wa) lines.push(`📞 WhatsApp: <a href="https://wa.me/${wa.replace(/\D/g,'')}" style="color:var(--red)">${wa}</a>`);
+      if(tg) lines.push(`✈️ Telegram: ${tg}`);
+      if(ct.hours) lines.push(`🕐 Часы ответа: ${ct.hours}`);
+      const p = card.querySelector('p');
+      if(p && lines.length) p.innerHTML = lines.join('<br>');
+    }
+  });
+
+  /* --- BLOCKED DATES --- */
+  if(d.blockedDates && d.blockedDates.length > 0) {
+    // Merge admin blocked dates with hardcoded ones
+    const extra = d.blockedDates
+      .filter(r => r.from && r.to)
+      .map(r => [r.from, r.to]);
+    if(extra.length) {
+      // bookedRanges is already declared; extend it
+      try { bookedRanges.push(...extra); } catch(e){}
+    }
+  }
+
+  /* --- CALCPRICE OVERRIDE --- */
+  // Re-define calcPrice to use admin rates
+  const _cin  = document.getElementById('cin');
+  const _cout = document.getElementById('cout');
+
+  function calcPriceAdmin(){
+    if(!_cin || !_cout || !_cin.value || !_cout.value){
+      document.getElementById('nodate-msg').style.display='';
+      document.getElementById('priceBreak').style.display='none';
+      return;
+    }
+    const n = Math.round((new Date(_cout.value)-new Date(_cin.value))/86400000);
+    if(n<=0) return;
+    const r = window._adminRates;
+    const rate = n>=7 ? r.rateLong : n>=3 ? r.rateMid : r.rateShort;
+    const full = r.rateShort;
+    const disc = (full-rate)*n;
+    const cleaning = r.feeCleaning;
+    const actualTotal = rate*n+cleaning;
+    document.getElementById('nodate-msg').style.display='none';
+    document.getElementById('priceBreak').style.display='flex';
+    document.getElementById('cardRate').textContent = rate.toLocaleString('ru')+' ₽';
+    document.getElementById('pl1').textContent = `${rate.toLocaleString('ru')} ₽ × ${n} ${n===1?'ночь':n<5?'ночи':'ночей'}`;
+    document.getElementById('pl1v').textContent = `${(rate*n).toLocaleString('ru')} ₽`;
+    document.getElementById('plDisc').textContent = disc>0 ? `−${disc.toLocaleString('ru')} ₽` : '—';
+    document.getElementById('plTotal').textContent = `${actualTotal.toLocaleString('ru')} ₽`;
+  }
+
+  if(_cin && _cout){
+    _cin.addEventListener('change', calcPriceAdmin);
+    _cout.addEventListener('change', calcPriceAdmin);
+  }
+
+  // Override modal open to use admin rates too
+  window._openModalAdmin = function(){
+    if(!_cin.value||!_cout.value){ alert('Выберите даты заезда и выезда'); _cin.focus(); return; }
+    const n=Math.round((new Date(_cout.value)-new Date(_cin.value))/86400000);
+    const r=window._adminRates;
+    const rate=n>=7?r.rateLong:n>=3?r.rateMid:r.rateShort;
+    const disc=(r.rateShort-rate)*n;
+    const cleaning=r.feeCleaning;
+    const total=rate*n+cleaning;
+    const sumHTML=`
+      <div class="ms-row"><span>📅 Заезд</span><span>${formatDate(_cin.value)}</span></div>
+      <div class="ms-row"><span>📅 Выезд</span><span>${formatDate(_cout.value)}</span></div>
+      <div class="ms-row"><span>${rate.toLocaleString('ru')} ₽ × ${n} ${n===1?'ночь':n<5?'ночи':'ночей'}</span><span>${(rate*n).toLocaleString('ru')} ₽</span></div>
+      ${disc>0?`<div class="ms-row"><span>Скидка</span><span style="color:#008A05">−${disc.toLocaleString('ru')} ₽</span></div>`:''}
+      <div class="ms-row"><span>Уборка</span><span>${cleaning.toLocaleString('ru')} ₽</span></div>
+      <div class="ms-row"><span>Итого</span><span>${total.toLocaleString('ru')} ₽</span></div>`;
+    document.getElementById('modalSummary').innerHTML=sumHTML;
+    document.getElementById('modalSummary2').innerHTML=sumHTML;
+    document.getElementById('payAmount').textContent=total.toLocaleString('ru')+' ₽';
+    document.getElementById('modalBg').classList.add('open');
+    document.body.style.overflow='hidden';
+    goStep(1);
+  };
+  // Patch the book button
+  const bookBtn = document.querySelector('.book-btn');
+  if(bookBtn) bookBtn.setAttribute('onclick','window._openModalAdmin ? _openModalAdmin() : openModal()');
+
+})();
+
+/* ===================================================================
+   TELEGRAM MINI APP INTEGRATION
+   =================================================================== */
+(function initTelegram(){
+  const tg = window.Telegram && window.Telegram.WebApp;
+  if (!tg) return; // открыт не в Telegram — всё работает как обычный сайт
+
+  // 1. Инициализация — сообщаем Telegram что приложение готово
+  tg.ready();
+  tg.expand(); // раскрываем на весь экран
+
+  // 2. Применяем тему Telegram к body
+  document.body.classList.add('tg-app');
+
+  // 3. Применяем цвета темы Telegram через CSS-переменные
+  const tp = tg.themeParams || {};
+  const root = document.documentElement;
+  if (tp.bg_color)        root.style.setProperty('--tg-bg',        tp.bg_color);
+  if (tp.text_color)      root.style.setProperty('--tg-text',      tp.text_color);
+  if (tp.button_color)    root.style.setProperty('--tg-btn',       tp.button_color);
+  if (tp.button_text_color) root.style.setProperty('--tg-btn-text', tp.button_text_color);
+
+  // 4. Кнопка «Назад» — встроенная в шапку Telegram
+  tg.BackButton.onClick(() => {
+    // Если открыт модальный — закрываем его, иначе закрываем Mini App
+    const modal = document.getElementById('modalBg');
+    if (modal && modal.classList.contains('open')) {
+      closeModal();
+    } else {
+      tg.close();
+    }
+  });
+
+  // Показывать BackButton когда модал открыт
+  const origOpenModal = window.openModal;
+  window.openModal = function(){
+    tg.BackButton.show();
+    if (window._openModalAdmin) { _openModalAdmin(); } else { origOpenModal(); }
+  };
+  const origCloseModal = window.closeModal;
+  window.closeModal = function(){
+    tg.BackButton.hide();
+    origCloseModal();
+  };
+
+  // 5. Нативная MainButton — большая синяя кнопка внизу экрана Telegram
+  //    Активируется когда гость выбрал даты
+  const MB = tg.MainButton;
+  MB.setText('Выбрать даты →');
+  MB.setParams({ color: '#FF385C', text_color: '#ffffff' });
+  MB.show();
+
+  // Следим за датами — меняем текст MainButton
+  function updateMainButton(){
+    const cin  = document.getElementById('cin');
+    const cout = document.getElementById('cout');
+    if (cin && cout && cin.value && cout.value) {
+      const n = Math.round((new Date(cout.value) - new Date(cin.value)) / 86400000);
+      if (n > 0) {
+        const r = window._adminRates || { rateShort:4500, rateMid:3800, rateLong:3200, feeCleaning:1500 };
+        const rate = n>=7 ? r.rateLong : n>=3 ? r.rateMid : r.rateShort;
+        const total = rate * n + r.feeCleaning;
+        MB.setText(`Забронировать — ${total.toLocaleString('ru')} ₽`);
+        MB.setParams({ color: '#FF385C', text_color: '#ffffff', is_active: true });
+        return;
+      }
+    }
+    MB.setText('Выберите даты →');
+    MB.setParams({ color: '#888888', text_color: '#ffffff', is_active: false });
+  }
+
+  document.addEventListener('change', e => {
+    if (e.target.id === 'cin' || e.target.id === 'cout') updateMainButton();
+  });
+  updateMainButton();
+
+  // MainButton нажата — открываем модал с подтверждением
+  MB.onClick(() => {
+    const cin  = document.getElementById('cin');
+    const cout = document.getElementById('cout');
+    if (!cin.value || !cout.value) {
+      // Скроллим к блоку выбора дат
+      document.getElementById('contacts').scrollIntoView({ behavior: 'smooth' });
+      return;
+    }
+    window.openModal();
+  });
+
+  // 6. После подтверждения бронирования — отправляем данные боту
+  //    (бот получит JSON со всеми деталями и уведомит хозяина)
+  const origGoStep = window.goStep;
+  window.goStep = function(n){
+    origGoStep(n);
+    if (n === 3) {
+      // Шаг 3 = успех. Собираем данные и отправляем боту
+      const cin  = document.getElementById('cin');
+      const cout = document.getElementById('cout');
+      const name = document.getElementById('fName')  ? document.getElementById('fName').value  : '';
+      const phone= document.getElementById('fPhone') ? document.getElementById('fPhone').value : '';
+      const email= document.getElementById('fEmail') ? document.getElementById('fEmail').value : '';
+      const guests= document.getElementById('guestsSelect') ? document.getElementById('guestsSelect').value : '';
+
+      const bookingData = {
+        type: 'booking_request',
+        checkin:  cin.value,
+        checkout: cout.value,
+        guests,
+        name,
+        phone,
+        email,
+      };
+
+      try {
+        tg.sendData(JSON.stringify(bookingData));
+      } catch(e) {
+        // sendData только в настоящем Mini App; в браузере — просто игнорируем
+      }
+
+      // Скрыть MainButton после бронирования
+      MB.hide();
+      tg.BackButton.hide();
+    }
+  };
+
+  // 7. Вибро-фидбек на кнопки (там где поддерживается)
+  document.querySelectorAll('.book-btn, .modal-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      try { tg.HapticFeedback.impactOccurred('medium'); } catch(e){}
+    });
+  });
+
+})();
+</script>
+</body>
+</html>

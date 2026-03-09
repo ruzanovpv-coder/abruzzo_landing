@@ -1,0 +1,933 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Панель хозяина — CasaAbruzzo</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 16px; height: 100%; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: #F7F7F7; color: #222; min-height: 100%; -webkit-font-smoothing: antialiased; }
+
+:root {
+  --red: #FF385C; --red-d: #E31C5F;
+  --g1: #222; --g2: #484848; --g3: #767676; --g4: #B0B0B0; --g5: #DDDDDD; --g6: #F7F7F7;
+  --white: #fff; --r: 12px;
+}
+
+/* ===================== LOGIN ===================== */
+#login-screen {
+  min-height: 100vh; display: flex; align-items: center; justify-content: center;
+  background: linear-gradient(135deg, #fff 0%, #FFF0F3 100%);
+}
+.login-box {
+  background: #fff; border-radius: 20px; padding: 48px 40px;
+  box-shadow: 0 8px 40px rgba(0,0,0,.10); width: 100%; max-width: 380px; text-align: center;
+}
+.login-logo { font-size: 2rem; font-weight: 700; color: var(--red); margin-bottom: 6px; }
+.login-sub { font-size: .88rem; color: var(--g3); margin-bottom: 32px; }
+.login-box input {
+  width: 100%; padding: 14px 16px; border: 1.5px solid var(--g5); border-radius: 10px;
+  font-size: 1rem; font-family: inherit; outline: none; margin-bottom: 14px;
+  transition: border-color .2s;
+}
+.login-box input:focus { border-color: var(--red); }
+.login-box button {
+  width: 100%; padding: 14px; background: var(--red); color: #fff;
+  border: none; border-radius: 10px; font-size: 1rem; font-weight: 600;
+  cursor: pointer; transition: background .2s;
+}
+.login-box button:hover { background: var(--red-d); }
+.login-err { color: var(--red); font-size: .85rem; margin-top: 10px; display: none; }
+
+/* ===================== APP ===================== */
+#app { display: none; min-height: 100vh; }
+
+/* ---- Top Bar ---- */
+.topbar {
+  background: #fff; border-bottom: 1px solid var(--g5);
+  padding: 0 24px; height: 60px; display: flex; align-items: center;
+  justify-content: space-between; position: sticky; top: 0; z-index: 100;
+}
+.topbar-brand { font-size: 1.1rem; font-weight: 700; color: var(--red); }
+.topbar-brand span { color: var(--g2); font-weight: 400; font-size: .9rem; margin-left: 8px; }
+.topbar-actions { display: flex; gap: 12px; align-items: center; }
+.btn-save {
+  background: var(--red); color: #fff; border: none; border-radius: 8px;
+  padding: 9px 20px; font-size: .9rem; font-weight: 600; cursor: pointer;
+  transition: background .2s, transform .1s;
+}
+.btn-save:hover { background: var(--red-d); }
+.btn-save:active { transform: scale(.97); }
+.btn-logout {
+  background: none; border: 1.5px solid var(--g5); border-radius: 8px;
+  padding: 8px 16px; font-size: .85rem; color: var(--g2); cursor: pointer;
+  transition: border-color .2s, color .2s;
+}
+.btn-logout:hover { border-color: var(--g3); color: var(--g1); }
+
+/* ---- Layout ---- */
+.layout { display: flex; min-height: calc(100vh - 60px); }
+
+/* ---- Sidebar ---- */
+.sidebar {
+  width: 220px; flex-shrink: 0; background: #fff; border-right: 1px solid var(--g5);
+  padding: 20px 12px; position: sticky; top: 60px; height: calc(100vh - 60px);
+  overflow-y: auto;
+}
+.sidebar-label {
+  font-size: .72rem; font-weight: 600; text-transform: uppercase; letter-spacing: .08em;
+  color: var(--g4); padding: 0 10px; margin: 16px 0 6px;
+}
+.sidebar-label:first-child { margin-top: 0; }
+.tab-btn {
+  display: flex; align-items: center; gap: 10px; width: 100%;
+  padding: 10px 12px; border: none; background: none; border-radius: 8px;
+  font-size: .92rem; color: var(--g2); cursor: pointer; text-align: left;
+  transition: background .15s, color .15s; font-family: inherit;
+}
+.tab-btn:hover { background: var(--g6); }
+.tab-btn.active { background: #FFF0F3; color: var(--red); font-weight: 600; }
+.tab-btn .ico { font-size: 1.1rem; width: 22px; text-align: center; }
+
+/* ---- Content ---- */
+.content { flex: 1; padding: 32px 40px; max-width: 860px; }
+@media (max-width: 700px) { .content { padding: 20px 16px; } .sidebar { display: none; } }
+
+/* ---- Tab panes ---- */
+.tab-pane { display: none; }
+.tab-pane.active { display: block; }
+
+/* ---- Section ---- */
+.section-title {
+  font-size: 1.35rem; font-weight: 700; margin-bottom: 4px;
+}
+.section-sub { font-size: .88rem; color: var(--g3); margin-bottom: 28px; }
+
+/* ---- Card ---- */
+.card {
+  background: #fff; border-radius: 14px; padding: 24px 28px;
+  border: 1px solid var(--g5); margin-bottom: 20px;
+}
+.card-title { font-size: 1rem; font-weight: 600; margin-bottom: 16px; color: var(--g1); }
+
+/* ---- Form elements ---- */
+.field-group { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.field-group.tri { grid-template-columns: 1fr 1fr 1fr; }
+.field-group.solo { grid-template-columns: 1fr; }
+@media (max-width: 600px) { .field-group, .field-group.tri { grid-template-columns: 1fr; } }
+
+.field { display: flex; flex-direction: column; gap: 6px; }
+.field label { font-size: .82rem; font-weight: 600; color: var(--g2); }
+.field input, .field select, .field textarea {
+  padding: 10px 13px; border: 1.5px solid var(--g5); border-radius: 8px;
+  font-size: .95rem; font-family: inherit; outline: none; background: #fff;
+  transition: border-color .2s; color: var(--g1);
+}
+.field input:focus, .field select:focus, .field textarea:focus { border-color: var(--red); }
+.field textarea { resize: vertical; min-height: 80px; line-height: 1.5; }
+.field .hint { font-size: .76rem; color: var(--g3); margin-top: 2px; }
+
+/* ---- Price row ---- */
+.price-row {
+  display: grid; grid-template-columns: 1fr auto 1fr;
+  align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--g6);
+}
+.price-row:last-child { border-bottom: none; }
+.price-row .label { font-size: .9rem; color: var(--g2); font-weight: 500; }
+.price-row .arrow { color: var(--g4); font-size: .85rem; }
+
+/* ---- Blocked dates ---- */
+.date-pair {
+  display: grid; grid-template-columns: 1fr 1fr auto; gap: 10px; align-items: end;
+  padding: 12px 0; border-bottom: 1px solid var(--g6);
+}
+.date-pair:last-child { border-bottom: none; }
+.date-pair label { font-size: .78rem; font-weight: 600; color: var(--g3); }
+.date-pair input[type=date] {
+  padding: 9px 12px; border: 1.5px solid var(--g5); border-radius: 8px;
+  font-size: .9rem; font-family: inherit; outline: none; width: 100%;
+  transition: border-color .2s;
+}
+.date-pair input[type=date]:focus { border-color: var(--red); }
+.btn-del {
+  background: #FFF0F3; color: var(--red); border: none; border-radius: 8px;
+  width: 36px; height: 36px; cursor: pointer; font-size: 1.1rem;
+  display: flex; align-items: center; justify-content: center;
+  transition: background .15s;
+}
+.btn-del:hover { background: #FFD6DE; }
+.btn-add {
+  display: flex; align-items: center; gap: 8px; background: none;
+  border: 1.5px dashed var(--g5); border-radius: 8px; padding: 10px 16px;
+  font-size: .9rem; color: var(--g3); cursor: pointer; width: 100%;
+  margin-top: 12px; font-family: inherit; transition: border-color .2s, color .2s;
+}
+.btn-add:hover { border-color: var(--red); color: var(--red); }
+
+/* ---- Rules list ---- */
+.rule-row {
+  display: flex; gap: 10px; align-items: center;
+  padding: 8px 0; border-bottom: 1px solid var(--g6);
+}
+.rule-row:last-child { border-bottom: none; }
+.rule-row input { flex: 1; }
+.rule-row .ico-sel {
+  width: 42px; padding: 9px 8px; text-align: center; border-radius: 8px;
+  border: 1.5px solid var(--g5); font-size: .9rem; cursor: pointer;
+  background: #fff;
+}
+
+/* ---- Toggle ---- */
+.toggle-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 0; border-bottom: 1px solid var(--g6);
+}
+.toggle-row:last-child { border-bottom: none; }
+.toggle-info .t-label { font-size: .92rem; font-weight: 500; color: var(--g1); }
+.toggle-info .t-sub { font-size: .8rem; color: var(--g3); margin-top: 2px; }
+.toggle {
+  width: 44px; height: 24px; border-radius: 12px; background: var(--g5);
+  border: none; cursor: pointer; position: relative;
+  transition: background .2s; flex-shrink: 0;
+}
+.toggle::after {
+  content: ''; position: absolute; top: 3px; left: 3px;
+  width: 18px; height: 18px; border-radius: 50%; background: #fff;
+  transition: transform .2s; box-shadow: 0 1px 4px rgba(0,0,0,.25);
+}
+.toggle.on { background: var(--red); }
+.toggle.on::after { transform: translateX(20px); }
+
+/* ---- Toast ---- */
+.toast {
+  position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%) translateY(20px);
+  background: var(--g1); color: #fff; padding: 12px 24px; border-radius: 100px;
+  font-size: .9rem; font-weight: 500; z-index: 9999;
+  opacity: 0; transition: opacity .3s, transform .3s; pointer-events: none;
+}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* ---- Change password ---- */
+.pwd-section { margin-top: 8px; }
+.pwd-row { display: flex; gap: 12px; align-items: flex-end; }
+.pwd-row .field { flex: 1; }
+.btn-change {
+  background: #fff; border: 1.5px solid var(--g5); border-radius: 8px;
+  padding: 10px 18px; font-size: .9rem; color: var(--g2); cursor: pointer;
+  font-family: inherit; white-space: nowrap; transition: border-color .2s, color .2s;
+  height: 42px;
+}
+.btn-change:hover { border-color: var(--red); color: var(--red); }
+
+/* ---- Preview link ---- */
+.preview-link {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: #fff; border: 1.5px solid var(--g5); border-radius: 8px;
+  padding: 10px 18px; font-size: .88rem; color: var(--g2);
+  cursor: pointer; text-decoration: none; transition: border-color .2s, color .2s;
+}
+.preview-link:hover { border-color: var(--red); color: var(--red); }
+</style>
+</head>
+<body>
+
+<!-- ===================== LOGIN ===================== -->
+<div id="login-screen">
+  <div class="login-box">
+    <div class="login-logo">🏡 CasaAbruzzo</div>
+    <div class="login-sub">Панель управления для хозяев</div>
+    <input type="password" id="pwd-input" placeholder="Введите пароль" onkeydown="if(event.key==='Enter')doLogin()">
+    <button onclick="doLogin()">Войти</button>
+    <div class="login-err" id="login-err">Неверный пароль</div>
+  </div>
+</div>
+
+<!-- ===================== APP ===================== -->
+<div id="app">
+  <!-- Top bar -->
+  <div class="topbar">
+    <div class="topbar-brand">🏡 CasaAbruzzo <span>Панель хозяина</span></div>
+    <div class="topbar-actions">
+      <a href="landing_v5.html" target="_blank" class="preview-link">🔗 Открыть сайт</a>
+      <button class="btn-save" onclick="saveAll()">💾 Сохранить</button>
+      <button class="btn-logout" onclick="doLogout()">Выйти</button>
+    </div>
+  </div>
+
+  <div class="layout">
+    <!-- Sidebar -->
+    <div class="sidebar">
+      <div class="sidebar-label">Настройки</div>
+      <button class="tab-btn active" onclick="switchTab('prices', this)">
+        <span class="ico">💰</span>Цены
+      </button>
+      <button class="tab-btn" onclick="switchTab('conditions', this)">
+        <span class="ico">📋</span>Условия
+      </button>
+      <button class="tab-btn" onclick="switchTab('contacts', this)">
+        <span class="ico">📞</span>Контакты
+      </button>
+      <button class="tab-btn" onclick="switchTab('dates', this)">
+        <span class="ico">📅</span>Занятые даты
+      </button>
+      <button class="tab-btn" onclick="switchTab('rules', this)">
+        <span class="ico">📜</span>Правила дома
+      </button>
+      <div class="sidebar-label">Система</div>
+      <button class="tab-btn" onclick="switchTab('security', this)">
+        <span class="ico">🔒</span>Безопасность
+      </button>
+    </div>
+
+    <!-- Content -->
+    <div class="content">
+
+      <!-- ===== PRICES ===== -->
+      <div class="tab-pane active" id="pane-prices">
+        <div class="section-title">Цены</div>
+        <div class="section-sub">Стоимость за ночь в зависимости от длины проживания и сезона</div>
+
+        <div class="card">
+          <div class="card-title">Базовые тарифы (₽ за ночь)</div>
+          <div class="price-row">
+            <div class="label">1–2 ночи</div>
+            <div class="arrow">→</div>
+            <div class="field"><input type="number" id="rate_short" value="4500" min="0" step="100"></div>
+          </div>
+          <div class="price-row">
+            <div class="label">3–6 ночей</div>
+            <div class="arrow">→</div>
+            <div class="field"><input type="number" id="rate_mid" value="3800" min="0" step="100"></div>
+          </div>
+          <div class="price-row">
+            <div class="label">7+ ночей (недельная)</div>
+            <div class="arrow">→</div>
+            <div class="field"><input type="number" id="rate_long" value="3200" min="0" step="100"></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">Сезонные надбавки</div>
+          <div class="field-group tri">
+            <div class="field">
+              <label>Высокий сезон (июль–август)</label>
+              <input type="number" id="season_high" value="0" min="0" step="100" placeholder="доп. ₽ за ночь">
+              <span class="hint">Прибавляется к базовому тарифу</span>
+            </div>
+            <div class="field">
+              <label>Плечевой сезон (июнь, сент)</label>
+              <input type="number" id="season_shoulder" value="0" min="0" step="100" placeholder="доп. ₽ за ночь">
+            </div>
+            <div class="field">
+              <label>Низкий сезон (окт–май)</label>
+              <input type="number" id="season_low" value="0" min="0" step="100" placeholder="скидка ₽ за ночь">
+              <span class="hint">Вычитается из базового тарифа</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">Дополнительные сборы</div>
+          <div class="field-group">
+            <div class="field">
+              <label>Сбор за уборку (₽)</label>
+              <input type="number" id="fee_cleaning" value="1500" min="0" step="100">
+            </div>
+            <div class="field">
+              <label>Доплата за питомца (₽)</label>
+              <input type="number" id="fee_pet" value="500" min="0" step="100">
+            </div>
+            <div class="field">
+              <label>Доплата 7-й гость (₽/ночь)</label>
+              <input type="number" id="fee_extra_guest" value="700" min="0" step="100">
+            </div>
+            <div class="field">
+              <label>Туристический сбор (₽/чел/ночь)</label>
+              <input type="number" id="fee_tourist" value="0" min="0" step="10">
+              <span class="hint">0 если не взимается</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">Отображение на сайте</div>
+          <div class="field-group solo">
+            <div class="field">
+              <label>Зачёркнутая "старая" цена (₽ за ночь)</label>
+              <input type="number" id="price_orig" value="" min="0" step="100" placeholder="Оставьте пустым, если не нужна">
+              <span class="hint">Показывается рядом с актуальной ценой как скидка</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== CONDITIONS ===== -->
+      <div class="tab-pane" id="pane-conditions">
+        <div class="section-title">Условия проживания</div>
+        <div class="section-sub">Правила заезда, выезда и общие ограничения</div>
+
+        <div class="card">
+          <div class="card-title">Заезд и выезд</div>
+          <div class="field-group">
+            <div class="field">
+              <label>Заезд с (время)</label>
+              <input type="time" id="checkin_from" value="15:00">
+            </div>
+            <div class="field">
+              <label>Выезд до (время)</label>
+              <input type="time" id="checkout_to" value="11:00">
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">Гости</div>
+          <div class="field-group">
+            <div class="field">
+              <label>Максимум гостей (без доплаты)</label>
+              <input type="number" id="max_guests" value="6" min="1" max="20">
+            </div>
+            <div class="field">
+              <label>Максимум гостей (с доплатой)</label>
+              <input type="number" id="max_guests_extra" value="7" min="1" max="20">
+              <span class="hint">0 если доп. гости не разрешены</span>
+            </div>
+            <div class="field">
+              <label>Минимальный срок аренды (ночей)</label>
+              <input type="number" id="min_nights" value="2" min="1" max="30">
+            </div>
+            <div class="field">
+              <label>Минимум в высокий сезон (ночей)</label>
+              <input type="number" id="min_nights_high" value="5" min="1" max="30">
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">Разрешения</div>
+          <div class="toggle-row">
+            <div class="toggle-info">
+              <div class="t-label">🐾 Питомцы разрешены</div>
+              <div class="t-sub">Отображается в характеристиках квартиры</div>
+            </div>
+            <button class="toggle on" id="allow_pets" onclick="toggleBtn(this)"></button>
+          </div>
+          <div class="toggle-row">
+            <div class="toggle-info">
+              <div class="t-label">🚬 Курение на террасе</div>
+              <div class="t-sub">Разрешено ли курить на террасе</div>
+            </div>
+            <button class="toggle on" id="allow_smoking" onclick="toggleBtn(this)"></button>
+          </div>
+          <div class="toggle-row">
+            <div class="toggle-info">
+              <div class="t-label">🎉 Вечеринки</div>
+              <div class="t-sub">Разрешены ли вечеринки</div>
+            </div>
+            <button class="toggle" id="allow_parties" onclick="toggleBtn(this)"></button>
+          </div>
+          <div class="toggle-row">
+            <div class="toggle-info">
+              <div class="t-label">🧒 Можно с детьми</div>
+              <div class="t-sub">Упоминать ли в описании</div>
+            </div>
+            <button class="toggle on" id="allow_children" onclick="toggleBtn(this)"></button>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">Способ оплаты</div>
+          <div class="field-group solo">
+            <div class="field">
+              <label>Описание способа оплаты</label>
+              <textarea id="payment_desc" rows="3">Переведите сумму через СБП на номер телефона. После перевода пришлите скриншот в WhatsApp.</textarea>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== CONTACTS ===== -->
+      <div class="tab-pane" id="pane-contacts">
+        <div class="section-title">Контакты</div>
+        <div class="section-sub">Номера для связи с гостями и реквизиты оплаты</div>
+
+        <div class="card">
+          <div class="card-title">Мессенджеры</div>
+          <div class="field-group">
+            <div class="field">
+              <label>WhatsApp номер</label>
+              <input type="tel" id="contact_whatsapp" value="+7 (999) 123-45-67" placeholder="+7 (999) 000-00-00">
+              <span class="hint">Отображается на кнопках и в путеводителе гостя</span>
+            </div>
+            <div class="field">
+              <label>Telegram (ник или номер)</label>
+              <input type="text" id="contact_telegram" value="@casaabruzzo" placeholder="@username или +7...">
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">Реквизиты оплаты (СБП)</div>
+          <div class="field-group">
+            <div class="field">
+              <label>Телефон для СБП</label>
+              <input type="tel" id="sbp_phone" value="+7 (999) 123-45-67" placeholder="+7 (999) 000-00-00">
+              <span class="hint">Показывается гостю в шаге оплаты</span>
+            </div>
+            <div class="field">
+              <label>Имя получателя</label>
+              <input type="text" id="sbp_name" value="Иван И." placeholder="Имя Фамилия">
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">Дополнительно</div>
+          <div class="field-group">
+            <div class="field">
+              <label>Email (опционально)</label>
+              <input type="email" id="contact_email" value="" placeholder="your@email.com">
+            </div>
+            <div class="field">
+              <label>Часы ответа</label>
+              <input type="text" id="contact_hours" value="09:00 – 22:00 (МСК)" placeholder="09:00 – 22:00">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== DATES ===== -->
+      <div class="tab-pane" id="pane-dates">
+        <div class="section-title">Занятые даты</div>
+        <div class="section-sub">Даты, когда квартира недоступна для бронирования (уже забронировано или на техобслуживании)</div>
+
+        <div class="card">
+          <div class="card-title">Блокировка периодов</div>
+          <div id="blocked-dates-list">
+            <!-- filled by JS -->
+          </div>
+          <button class="btn-add" onclick="addDatePair()">
+            + Добавить период
+          </button>
+        </div>
+
+        <div class="card">
+          <div class="card-title" style="margin-bottom:8px">Как это работает</div>
+          <p style="font-size:.88rem;color:var(--g3);line-height:1.6">
+            Добавленные периоды будут автоматически помечены как недоступные в календаре на сайте.
+            Гость не сможет выбрать даты, попадающие в закрытый период.
+            Синхронизация с Airbnb — ручная.
+          </p>
+        </div>
+      </div>
+
+      <!-- ===== RULES ===== -->
+      <div class="tab-pane" id="pane-rules">
+        <div class="section-title">Правила дома</div>
+        <div class="section-sub">Что отображается в разделе «Гостевой путеводитель»</div>
+
+        <div class="card">
+          <div class="card-title">✅ Разрешено</div>
+          <div id="rules-allowed"></div>
+          <button class="btn-add" onclick="addRule('allowed')">+ Добавить правило</button>
+        </div>
+
+        <div class="card">
+          <div class="card-title">🚫 Запрещено</div>
+          <div id="rules-forbidden"></div>
+          <button class="btn-add" onclick="addRule('forbidden')">+ Добавить правило</button>
+        </div>
+
+        <div class="card">
+          <div class="card-title">📝 Важная информация</div>
+          <div class="field-group solo">
+            <div class="field">
+              <label>Текст раздела "Важная информация"</label>
+              <textarea id="important_info" rows="6">• Штраф за въезд в ZTL без разрешения — до 100 €
+• Парковка у дома бесплатная
+• Тихие часы после 23:00
+• При выезде оставьте ключи на столе
+• Валюта: евро (€)</textarea>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== SECURITY ===== -->
+      <div class="tab-pane" id="pane-security">
+        <div class="section-title">Безопасность</div>
+        <div class="section-sub">Управление паролем доступа к панели</div>
+
+        <div class="card">
+          <div class="card-title">Смена пароля</div>
+          <div class="field-group">
+            <div class="field">
+              <label>Текущий пароль</label>
+              <input type="password" id="old-pwd" placeholder="Текущий пароль">
+            </div>
+            <div class="field">
+              <label>Новый пароль</label>
+              <input type="password" id="new-pwd" placeholder="Минимум 6 символов">
+            </div>
+            <div class="field">
+              <label>Повторите новый пароль</label>
+              <input type="password" id="new-pwd2" placeholder="Повторите пароль">
+            </div>
+          </div>
+          <button class="btn-change" style="margin-top:16px" onclick="changePwd()">Изменить пароль</button>
+          <div id="pwd-msg" style="margin-top:10px;font-size:.85rem;display:none"></div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">Данные</div>
+          <p style="font-size:.88rem;color:var(--g3);line-height:1.6;margin-bottom:16px">
+            Все настройки хранятся в локальном хранилище браузера (localStorage) этого компьютера.
+            При переходе на другой браузер или устройство их нужно настроить заново.
+          </p>
+          <button class="btn-change" onclick="exportSettings()">📤 Экспорт настроек (JSON)</button>
+          <button class="btn-change" style="margin-left:10px" onclick="document.getElementById('import-file').click()">📥 Импорт настроек</button>
+          <input type="file" id="import-file" accept=".json" style="display:none" onchange="importSettings(event)">
+        </div>
+      </div>
+
+    </div><!-- /content -->
+  </div><!-- /layout -->
+</div><!-- /app -->
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ======================================================
+//  PASSWORD (SHA-256 stored in localStorage)
+// ======================================================
+const DEFAULT_PWD_HASH = 'cbbb479224e9e547f89830396031054b371ada77fc68e2f8b3bff0e8485388e2'; // "owner2024"
+const STORAGE_KEY = 'casaabruzzo_admin';
+
+async function sha256(str) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+
+function getStoredHash() {
+  const d = loadData();
+  return d._pwdHash || DEFAULT_PWD_HASH;
+}
+
+async function doLogin() {
+  const val = document.getElementById('pwd-input').value;
+  const h = await sha256(val);
+  if (h === getStoredHash()) {
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+    loadForm();
+  } else {
+    const err = document.getElementById('login-err');
+    err.style.display = 'block';
+    setTimeout(() => err.style.display = 'none', 2500);
+  }
+}
+
+function doLogout() {
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('login-screen').style.display = 'flex';
+  document.getElementById('pwd-input').value = '';
+}
+
+// ======================================================
+//  DATA (localStorage)
+// ======================================================
+function loadData() {
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || {}; } catch(e){ return {}; }
+}
+
+function saveData(d) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(d));
+}
+
+// ======================================================
+//  TABS
+// ======================================================
+function switchTab(id, btn) {
+  document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('pane-' + id).classList.add('active');
+  btn.classList.add('active');
+}
+
+// ======================================================
+//  TOGGLE BUTTONS
+// ======================================================
+function toggleBtn(el) {
+  el.classList.toggle('on');
+}
+
+function isOn(id) { return document.getElementById(id).classList.contains('on'); }
+function setOn(id, val) {
+  const el = document.getElementById(id);
+  if (val) el.classList.add('on'); else el.classList.remove('on');
+}
+
+// ======================================================
+//  BLOCKED DATES
+// ======================================================
+let blockedDates = [];
+
+function renderBlockedDates() {
+  const list = document.getElementById('blocked-dates-list');
+  list.innerHTML = '';
+  if (blockedDates.length === 0) {
+    list.innerHTML = '<p style="font-size:.88rem;color:var(--g3);padding:8px 0">Нет заблокированных периодов</p>';
+    return;
+  }
+  blockedDates.forEach((pair, i) => {
+    const row = document.createElement('div');
+    row.className = 'date-pair';
+    row.innerHTML = `
+      <div>
+        <label>С</label>
+        <input type="date" value="${pair.from}" onchange="blockedDates[${i}].from=this.value">
+      </div>
+      <div>
+        <label>По (включительно)</label>
+        <input type="date" value="${pair.to}" onchange="blockedDates[${i}].to=this.value">
+      </div>
+      <button class="btn-del" onclick="removeDate(${i})">✕</button>
+    `;
+    list.appendChild(row);
+  });
+}
+
+function addDatePair() {
+  blockedDates.push({ from: '', to: '' });
+  renderBlockedDates();
+}
+
+function removeDate(i) {
+  blockedDates.splice(i, 1);
+  renderBlockedDates();
+}
+
+// ======================================================
+//  RULES
+// ======================================================
+let rulesAllowed = [];
+let rulesForbidden = [];
+
+function renderRules(type) {
+  const arr = type === 'allowed' ? rulesAllowed : rulesForbidden;
+  const container = document.getElementById('rules-' + type);
+  container.innerHTML = '';
+  arr.forEach((rule, i) => {
+    const row = document.createElement('div');
+    row.className = 'rule-row';
+    row.innerHTML = `
+      <div class="field" style="flex:1">
+        <input type="text" value="${rule}" placeholder="Введите правило..."
+          onchange="${type==='allowed'?'rulesAllowed':'rulesForbidden'}[${i}]=this.value">
+      </div>
+      <button class="btn-del" onclick="removeRule('${type}',${i})">✕</button>
+    `;
+    container.appendChild(row);
+  });
+}
+
+function addRule(type) {
+  if (type === 'allowed') rulesAllowed.push('');
+  else rulesForbidden.push('');
+  renderRules(type);
+}
+
+function removeRule(type, i) {
+  if (type === 'allowed') rulesAllowed.splice(i, 1);
+  else rulesForbidden.splice(i, 1);
+  renderRules(type);
+}
+
+// ======================================================
+//  LOAD FORM FROM STORAGE
+// ======================================================
+function val(id) { return document.getElementById(id).value; }
+function setVal(id, v) { if (v !== undefined && v !== null) document.getElementById(id).value = v; }
+
+function loadForm() {
+  const d = loadData();
+  const p = d.prices || {};
+  setVal('rate_short', p.rate_short ?? 4500);
+  setVal('rate_mid', p.rate_mid ?? 3800);
+  setVal('rate_long', p.rate_long ?? 3200);
+  setVal('season_high', p.season_high ?? 0);
+  setVal('season_shoulder', p.season_shoulder ?? 0);
+  setVal('season_low', p.season_low ?? 0);
+  setVal('fee_cleaning', p.fee_cleaning ?? 1500);
+  setVal('fee_pet', p.fee_pet ?? 500);
+  setVal('fee_extra_guest', p.fee_extra_guest ?? 700);
+  setVal('fee_tourist', p.fee_tourist ?? 0);
+  setVal('price_orig', p.price_orig ?? '');
+
+  const c = d.conditions || {};
+  setVal('checkin_from', c.checkin_from ?? '15:00');
+  setVal('checkout_to', c.checkout_to ?? '11:00');
+  setVal('max_guests', c.max_guests ?? 6);
+  setVal('max_guests_extra', c.max_guests_extra ?? 7);
+  setVal('min_nights', c.min_nights ?? 2);
+  setVal('min_nights_high', c.min_nights_high ?? 5);
+  setOn('allow_pets', c.allow_pets !== false);
+  setOn('allow_smoking', c.allow_smoking !== false);
+  setOn('allow_parties', c.allow_parties === true);
+  setOn('allow_children', c.allow_children !== false);
+  setVal('payment_desc', c.payment_desc ?? 'Переведите сумму через СБП на номер телефона. После перевода пришлите скриншот в WhatsApp.');
+
+  const ct = d.contacts || {};
+  setVal('contact_whatsapp', ct.whatsapp ?? '+7 (999) 123-45-67');
+  setVal('contact_telegram', ct.telegram ?? '@casaabruzzo');
+  setVal('sbp_phone', ct.sbp_phone ?? '+7 (999) 123-45-67');
+  setVal('sbp_name', ct.sbp_name ?? 'Иван И.');
+  setVal('contact_email', ct.email ?? '');
+  setVal('contact_hours', ct.hours ?? '09:00 – 22:00 (МСК)');
+
+  blockedDates = d.blockedDates || [];
+  renderBlockedDates();
+
+  rulesAllowed = d.rules?.allowed || ['Питомцы с доплатой', 'Курение на террасе', 'Гости до 7 человек (с доплатой)'];
+  rulesForbidden = d.rules?.forbidden || ['Курение внутри', 'Вечеринки', 'Шум после 23:00'];
+  setVal('important_info', d.rules?.important ?? '• Штраф за въезд в ZTL без разрешения — до 100 €\n• Парковка у дома бесплатная\n• Тихие часы после 23:00\n• При выезде оставьте ключи на столе\n• Валюта: евро (€)');
+  renderRules('allowed');
+  renderRules('forbidden');
+}
+
+// ======================================================
+//  SAVE ALL
+// ======================================================
+function saveAll() {
+  // collect current values from rule inputs
+  document.querySelectorAll('#rules-allowed input[type=text]').forEach((el,i) => { rulesAllowed[i] = el.value; });
+  document.querySelectorAll('#rules-forbidden input[type=text]').forEach((el,i) => { rulesForbidden[i] = el.value; });
+
+  const d = loadData();
+  d.prices = {
+    rate_short: +val('rate_short'),
+    rate_mid: +val('rate_mid'),
+    rate_long: +val('rate_long'),
+    season_high: +val('season_high'),
+    season_shoulder: +val('season_shoulder'),
+    season_low: +val('season_low'),
+    fee_cleaning: +val('fee_cleaning'),
+    fee_pet: +val('fee_pet'),
+    fee_extra_guest: +val('fee_extra_guest'),
+    fee_tourist: +val('fee_tourist'),
+    price_orig: val('price_orig') ? +val('price_orig') : null,
+  };
+  d.conditions = {
+    checkin_from: val('checkin_from'),
+    checkout_to: val('checkout_to'),
+    max_guests: +val('max_guests'),
+    max_guests_extra: +val('max_guests_extra'),
+    min_nights: +val('min_nights'),
+    min_nights_high: +val('min_nights_high'),
+    allow_pets: isOn('allow_pets'),
+    allow_smoking: isOn('allow_smoking'),
+    allow_parties: isOn('allow_parties'),
+    allow_children: isOn('allow_children'),
+    payment_desc: val('payment_desc'),
+  };
+  d.contacts = {
+    whatsapp: val('contact_whatsapp'),
+    telegram: val('contact_telegram'),
+    sbp_phone: val('sbp_phone'),
+    sbp_name: val('sbp_name'),
+    email: val('contact_email'),
+    hours: val('contact_hours'),
+  };
+  d.blockedDates = blockedDates;
+  d.rules = {
+    allowed: rulesAllowed.filter(r => r.trim()),
+    forbidden: rulesForbidden.filter(r => r.trim()),
+    important: val('important_info'),
+  };
+  saveData(d);
+  showToast('✅ Настройки сохранены');
+}
+
+// ======================================================
+//  CHANGE PASSWORD
+// ======================================================
+async function changePwd() {
+  const old = document.getElementById('old-pwd').value;
+  const n1 = document.getElementById('new-pwd').value;
+  const n2 = document.getElementById('new-pwd2').value;
+  const msg = document.getElementById('pwd-msg');
+
+  const oldHash = await sha256(old);
+  if (oldHash !== getStoredHash()) {
+    msg.style.display = 'block'; msg.style.color = 'var(--red)';
+    msg.textContent = 'Неверный текущий пароль'; return;
+  }
+  if (n1.length < 6) {
+    msg.style.display = 'block'; msg.style.color = 'var(--red)';
+    msg.textContent = 'Новый пароль слишком короткий (минимум 6 символов)'; return;
+  }
+  if (n1 !== n2) {
+    msg.style.display = 'block'; msg.style.color = 'var(--red)';
+    msg.textContent = 'Пароли не совпадают'; return;
+  }
+  const d = loadData();
+  d._pwdHash = await sha256(n1);
+  saveData(d);
+  msg.style.display = 'block'; msg.style.color = 'green';
+  msg.textContent = 'Пароль изменён';
+  document.getElementById('old-pwd').value = '';
+  document.getElementById('new-pwd').value = '';
+  document.getElementById('new-pwd2').value = '';
+  setTimeout(() => msg.style.display = 'none', 3000);
+}
+
+// ======================================================
+//  EXPORT / IMPORT
+// ======================================================
+function exportSettings() {
+  const d = loadData();
+  const blob = new Blob([JSON.stringify(d, null, 2)], {type: 'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'casaabruzzo_settings.json'; a.click();
+  URL.revokeObjectURL(url);
+  showToast('📤 Файл настроек скачан');
+}
+
+function importSettings(evt) {
+  const file = evt.target.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const d = JSON.parse(e.target.result);
+      saveData(d);
+      loadForm();
+      showToast('📥 Настройки импортированы');
+    } catch(err) {
+      showToast('❌ Ошибка: файл повреждён');
+    }
+  };
+  reader.readAsText(file);
+  evt.target.value = '';
+}
+
+// ======================================================
+//  TOAST
+// ======================================================
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+// ======================================================
+//  INIT
+// ======================================================
+document.getElementById('pwd-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') doLogin();
+});
+</script>
+</body>
+</html>
